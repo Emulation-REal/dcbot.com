@@ -1,15 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Simple 3D FPS Game</title>
+  <title>Enhanced 3D FPS Shooter Game</title>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
     canvas { display: block; }
-    #info { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial; }
+    #hud { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; }
+    #health { font-size: 20px; }
+    #score { font-size: 20px; margin-top: 5px; }
+    #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 30px; pointer-events: none; }
+    #ammo { font-size: 20px; margin-top: 5px; }
   </style>
 </head>
 <body>
-  <div id="info">Health: <span id="health">100</span></div>
+  <div id="hud">
+    <div id="health">Health: 100</div>
+    <div id="score">Score: 0</div>
+    <div id="ammo">Ammo: Infinite</div>
+  </div>
+  <div id="crosshair">+</div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script>
     // Scene setup
@@ -19,30 +28,81 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Camera variables (formerly player)
-    let cameraVars = { health: 100, speed: 0.1, jumpHeight: 0.2, velocity: new THREE.Vector3(), canJump: true };
-    camera.position.set(0, 1, 5);
+    // Add lighting for better visuals
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(5, 10, 5);
+    scene.add(directionalLight);
 
-    // Enemy (simple cube behind a wall)
-    const enemyGeometry = new THREE.BoxGeometry(1, 1, 1);
-    const enemyMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
-    enemy.position.set(0, 0.5, -5);
-    scene.add(enemy);
+    // Camera variables
+    let cameraVars = { 
+      health: 100, 
+      speed: 0.2, 
+      jumpHeight: 0.3, 
+      velocity: new THREE.Vector3(), 
+      canJump: true,
+      score: 0
+    };
+    camera.position.set(0, 1, 20);
 
-    // Wall (now grey)
-    const wallGeometry = new THREE.BoxGeometry(10, 2, 0.2);
-    const wallMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
-    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-    wall.position.set(0, 1, -2);
-    scene.add(wall);
-
-    // Floor
-    const floorGeometry = new THREE.PlaneGeometry(20, 20);
-    const floorMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
+    // Huge map: Large floor
+    const floorGeometry = new THREE.PlaneGeometry(200, 200);
+    const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
+
+    // Obstacles: Multiple walls and boxes
+    function createWall(position, size, color = 0x808080) {
+      const geometry = new THREE.BoxGeometry(...size);
+      const material = new THREE.MeshStandardMaterial({ color });
+      const wall = new THREE.Mesh(geometry, material);
+      wall.position.set(...position);
+      scene.add(wall);
+      return wall;
+    }
+
+    // Central wall
+    createWall([0, 1, -2], [50, 4, 1]);
+
+    // Additional obstacles
+    createWall([10, 1, -10], [5, 2, 5], 0x00ff00);
+    createWall([-15, 1, -20], [10, 3, 2], 0xff00ff);
+    createWall([20, 1, 10], [8, 2, 8], 0x0000ff);
+    createWall([-20, 1, 15], [6, 4, 3], 0xffff00);
+    // More scattered obstacles
+    for (let i = 0; i < 20; i++) {
+      const x = Math.random() * 180 - 90;
+      const z = Math.random() * 180 - 90;
+      createWall([x, 1, z], [Math.random() * 5 + 2, Math.random() * 3 + 1, Math.random() * 5 + 2], Math.random() * 0xffffff);
+    }
+
+    // Different enemies
+    const enemies = [];
+    function createEnemy(position, color, speed, health) {
+      const geometry = new THREE.BoxGeometry(1, 1, 1);
+      const material = new THREE.MeshStandardMaterial({ color });
+      const enemy = new THREE.Mesh(geometry, material);
+      enemy.position.set(...position);
+      enemy.userData = { speed, health, direction: 1, alive: true };
+      scene.add(enemy);
+      enemies.push(enemy);
+      return enemy;
+    }
+
+    // Create multiple enemies with variations
+    createEnemy([0, 0.5, -10], 0xff0000, 0.05, 50); // Red, slow, tanky
+    createEnemy([10, 0.5, -15], 0x00ff00, 0.1, 20); // Green, faster, weaker
+    createEnemy([-10, 0.5, -20], 0x0000ff, 0.08, 30); // Blue, medium
+    createEnemy([15, 0.5, 5], 0xffff00, 0.07, 40); // Yellow
+    createEnemy([-15, 0.5, 10], 0xff00ff, 0.06, 35); // Magenta
+    // Add more enemies scattered
+    for (let i = 0; i < 10; i++) {
+      const x = Math.random() * 180 - 90;
+      const z = Math.random() * 180 - 90;
+      createEnemy([x, 0.5, z], Math.random() * 0xffffff, Math.random() * 0.05 + 0.05, Math.random() * 30 + 20);
+    }
 
     // Keyboard controls
     const keys = {};
@@ -56,8 +116,12 @@
 
     // Mouse look with pointer lock
     let yaw = 0, pitch = 0;
-    document.addEventListener('click', () => {
-      document.body.requestPointerLock();
+    document.addEventListener('click', (e) => {
+      if (e.button === 0) { // Left click to shoot
+        shoot();
+      } else {
+        document.body.requestPointerLock();
+      }
     });
     document.addEventListener('mousemove', (e) => {
       if (document.pointerLockElement === document.body) {
@@ -68,15 +132,37 @@
       }
     });
 
-    // Enemy movement
-    let enemyDirection = 1;
-    const enemySpeed = 0.05;
+    // Shooting mechanic
+    const raycaster = new THREE.Raycaster();
+    function shoot() {
+      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+      const intersects = raycaster.intersectObjects(enemies);
+      if (intersects.length > 0) {
+        const enemy = intersects[0].object;
+        if (enemy.userData.alive) {
+          enemy.userData.health -= 10; // Damage
+          if (enemy.userData.health <= 0) {
+            enemy.userData.alive = false;
+            scene.remove(enemy);
+            cameraVars.score += 10;
+            document.getElementById('score').textContent = `Score: ${cameraVars.score}`;
+            // Respawn after 5 seconds
+            setTimeout(() => {
+              enemy.userData.health = 50; // Reset health
+              enemy.userData.alive = true;
+              enemy.position.set(Math.random() * 180 - 90, 0.5, Math.random() * 180 - 90);
+              scene.add(enemy);
+            }, 5000);
+          }
+        }
+      }
+    }
 
     // Game loop
     function animate() {
       requestAnimationFrame(animate);
 
-      // Movement
+      // Player movement
       const direction = new THREE.Vector3();
       if (keys['KeyW']) direction.z -= 1;
       if (keys['KeyS']) direction.z += 1;
@@ -100,24 +186,29 @@
         cameraVars.canJump = true;
       }
 
-      // Enemy movement (back and forth along x-axis)
-      enemy.position.x += enemyDirection * enemySpeed;
-      if (enemy.position.x > 5 || enemy.position.x < -5) {
-        enemyDirection *= -1;
-      }
+      // Enemy movements and attacks
+      enemies.forEach(enemy => {
+        if (enemy.userData.alive) {
+          // Simple patrol: back and forth
+          enemy.position.x += enemy.userData.direction * enemy.userData.speed;
+          if (Math.abs(enemy.position.x) > 50) {
+            enemy.userData.direction *= -1;
+          }
 
-      // Enemy "AI" (simple damage if close)
-      const distance = camera.position.distanceTo(enemy.position);
-      if (distance < 2 && cameraVars.health > 0) {
-        cameraVars.health -= 0.5;
-        document.getElementById('health').textContent = Math.max(0, Math.floor(cameraVars.health));
-      }
+          // Damage player if close
+          const distance = camera.position.distanceTo(enemy.position);
+          if (distance < 2 && cameraVars.health > 0) {
+            cameraVars.health -= 0.5;
+            document.getElementById('health').textContent = `Health: ${Math.max(0, Math.floor(cameraVars.health))}`;
+          }
+        }
+      });
 
-      // Respawn
+      // Respawn player
       if (cameraVars.health <= 0) {
         cameraVars.health = 100;
-        camera.position.set(0, 1, 5);
-        document.getElementById('health').textContent = cameraVars.health;
+        camera.position.set(0, 1, 20);
+        document.getElementById('health').textContent = `Health: ${cameraVars.health}`;
       }
 
       renderer.render(scene, camera);
