@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Enhanced 3D FPS Shooter Game</title>
+  <title>Ultra Enhanced 3D FPS Shooter Game</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
     canvas { display: block; }
@@ -10,98 +10,121 @@
     #score { font-size: 20px; margin-top: 5px; }
     #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 30px; pointer-events: none; }
     #ammo { font-size: 20px; margin-top: 5px; }
+    #instructions { position: absolute; bottom: 10px; left: 10px; color: white; background: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; }
   </style>
 </head>
 <body>
   <div id="hud">
     <div id="health">Health: 100</div>
     <div id="score">Score: 0</div>
-    <div id="ammo">Ammo: Infinite</div>
+    <div id="ammo">Ammo: 30 / 30</div>
   </div>
   <div id="crosshair">+</div>
+  <div id="instructions">WASD: Move | Space: Jump | Left Click: Shoot (after locking) | R: Reload | Esc: Unlock Cursor</div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script>
     // Scene setup
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    scene.fog = new THREE.Fog(0x000000, 0, 150); // Add fog for atmosphere
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);
     const renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Add lighting for better visuals
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    // Add improved lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    directionalLight.position.set(5, 10, 5);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(10, 20, 10);
     scene.add(directionalLight);
 
     // Camera variables
     let cameraVars = { 
       health: 100, 
-      speed: 0.2, 
-      jumpHeight: 0.3, 
+      speed: 0.3, 
+      jumpHeight: 0.4, 
       velocity: new THREE.Vector3(), 
       canJump: true,
-      score: 0
+      score: 0,
+      ammo: 30,
+      maxAmmo: 30,
+      reloading: false
     };
-    camera.position.set(0, 1, 20);
+    camera.position.set(0, 1, 30);
 
-    // Huge map: Large floor
-    const floorGeometry = new THREE.PlaneGeometry(200, 200);
-    const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
+    // Huge map: Even larger floor
+    const floorGeometry = new THREE.PlaneGeometry(300, 300);
+    const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x505050, roughness: 0.8 });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
 
-    // Obstacles: Multiple walls and boxes
+    // Obstacles array for collisions
+    const obstacles = [];
     function createWall(position, size, color = 0x808080) {
       const geometry = new THREE.BoxGeometry(...size);
-      const material = new THREE.MeshStandardMaterial({ color });
+      const material = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
       const wall = new THREE.Mesh(geometry, material);
       wall.position.set(...position);
+      wall.userData.bbox = new THREE.Box3().setFromObject(wall);
       scene.add(wall);
+      obstacles.push(wall);
       return wall;
     }
 
-    // Central wall
-    createWall([0, 1, -2], [50, 4, 1]);
-
-    // Additional obstacles
-    createWall([10, 1, -10], [5, 2, 5], 0x00ff00);
-    createWall([-15, 1, -20], [10, 3, 2], 0xff00ff);
-    createWall([20, 1, 10], [8, 2, 8], 0x0000ff);
-    createWall([-20, 1, 15], [6, 4, 3], 0xffff00);
-    // More scattered obstacles
-    for (let i = 0; i < 20; i++) {
-      const x = Math.random() * 180 - 90;
-      const z = Math.random() * 180 - 90;
-      createWall([x, 1, z], [Math.random() * 5 + 2, Math.random() * 3 + 1, Math.random() * 5 + 2], Math.random() * 0xffffff);
+    // Create more obstacles
+    createWall([0, 2, -5], [60, 5, 2]);
+    createWall([20, 2, -20], [10, 4, 10], 0x00ff00);
+    createWall([-25, 2, -30], [15, 5, 3], 0xff00ff);
+    createWall([30, 2, 15], [12, 4, 12], 0x0000ff);
+    createWall([-30, 2, 20], [8, 6, 4], 0xffff00);
+    for (let i = 0; i < 30; i++) {
+      const x = Math.random() * 280 - 140;
+      const z = Math.random() * 280 - 140;
+      createWall([x, 1 + Math.random() * 2, z], [Math.random() * 8 + 3, Math.random() * 5 + 2, Math.random() * 8 + 3], Math.random() * 0xffffff);
     }
 
-    // Different enemies
+    // Power-ups (health packs)
+    const powerUps = [];
+    function createPowerUp(position) {
+      const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+      const material = new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00 });
+      const powerUp = new THREE.Mesh(geometry, material);
+      powerUp.position.set(...position);
+      powerUp.userData = { type: 'health', value: 20, active: true };
+      scene.add(powerUp);
+      powerUps.push(powerUp);
+      return powerUp;
+    }
+    for (let i = 0; i < 10; i++) {
+      const x = Math.random() * 280 - 140;
+      const z = Math.random() * 280 - 140;
+      createPowerUp([x, 1, z]);
+    }
+
+    // Different enemies with chasing AI
     const enemies = [];
-    function createEnemy(position, color, speed, health) {
-      const geometry = new THREE.BoxGeometry(1, 1, 1);
+    function createEnemy(position, color, speed, health, chaseRange) {
+      const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
       const material = new THREE.MeshStandardMaterial({ color });
       const enemy = new THREE.Mesh(geometry, material);
       enemy.position.set(...position);
-      enemy.userData = { speed, health, direction: 1, alive: true };
+      enemy.userData = { speed, health, alive: true, chaseRange };
       scene.add(enemy);
       enemies.push(enemy);
       return enemy;
     }
 
-    // Create multiple enemies with variations
-    createEnemy([0, 0.5, -10], 0xff0000, 0.05, 50); // Red, slow, tanky
-    createEnemy([10, 0.5, -15], 0x00ff00, 0.1, 20); // Green, faster, weaker
-    createEnemy([-10, 0.5, -20], 0x0000ff, 0.08, 30); // Blue, medium
-    createEnemy([15, 0.5, 5], 0xffff00, 0.07, 40); // Yellow
-    createEnemy([-15, 0.5, 10], 0xff00ff, 0.06, 35); // Magenta
-    // Add more enemies scattered
-    for (let i = 0; i < 10; i++) {
-      const x = Math.random() * 180 - 90;
-      const z = Math.random() * 180 - 90;
-      createEnemy([x, 0.5, z], Math.random() * 0xffffff, Math.random() * 0.05 + 0.05, Math.random() * 30 + 20);
+    // Create varied enemies
+    createEnemy([0, 0.75, -15], 0xff0000, 0.06, 60, 20); // Red, slow, tanky, long range
+    createEnemy([15, 0.75, -20], 0x00ff00, 0.12, 25, 15); // Green, fast, weak
+    createEnemy([-15, 0.75, -25], 0x0000ff, 0.09, 40, 25); // Blue, medium
+    createEnemy([20, 0.75, 10], 0xffff00, 0.08, 50, 10); // Yellow
+    createEnemy([-20, 0.75, 15], 0xff00ff, 0.07, 45, 30); // Magenta
+    for (let i = 0; i < 15; i++) {
+      const x = Math.random() * 280 - 140;
+      const z = Math.random() * 280 - 140;
+      createEnemy([x, 0.75, z], Math.random() * 0xffffff, Math.random() * 0.06 + 0.06, Math.random() * 40 + 20, Math.random() * 20 + 10);
     }
 
     // Keyboard controls
@@ -111,16 +134,19 @@
       if (e.code === 'Escape') {
         document.exitPointerLock();
       }
+      if (e.code === 'KeyR' && !cameraVars.reloading) {
+        reload();
+      }
     });
     document.addEventListener('keyup', (e) => keys[e.code] = false);
 
-    // Mouse look with pointer lock
+    // Mouse look with improved pointer lock
     let yaw = 0, pitch = 0;
-    document.addEventListener('click', (e) => {
-      if (e.button === 0) { // Left click to shoot
-        shoot();
-      } else {
+    document.addEventListener('click', () => {
+      if (document.pointerLockElement !== document.body) {
         document.body.requestPointerLock();
+      } else if (cameraVars.ammo > 0 && !cameraVars.reloading) {
+        shoot();
       }
     });
     document.addEventListener('mousemove', (e) => {
@@ -132,44 +158,75 @@
       }
     });
 
-    // Shooting mechanic
+    // Shooting mechanic with ammo
     const raycaster = new THREE.Raycaster();
     function shoot() {
+      cameraVars.ammo--;
+      document.getElementById('ammo').textContent = `Ammo: ${cameraVars.ammo} / ${cameraVars.maxAmmo}`;
       raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
       const intersects = raycaster.intersectObjects(enemies);
       if (intersects.length > 0) {
         const enemy = intersects[0].object;
         if (enemy.userData.alive) {
-          enemy.userData.health -= 10; // Damage
+          enemy.userData.health -= 15; // Increased damage
           if (enemy.userData.health <= 0) {
             enemy.userData.alive = false;
             scene.remove(enemy);
-            cameraVars.score += 10;
+            cameraVars.score += 15;
             document.getElementById('score').textContent = `Score: ${cameraVars.score}`;
-            // Respawn after 5 seconds
+            // Respawn after 3 seconds with random position
             setTimeout(() => {
-              enemy.userData.health = 50; // Reset health
+              enemy.userData.health = 50;
               enemy.userData.alive = true;
-              enemy.position.set(Math.random() * 180 - 90, 0.5, Math.random() * 180 - 90);
+              enemy.position.set(Math.random() * 280 - 140, 0.75, Math.random() * 280 - 140);
               scene.add(enemy);
-            }, 5000);
+            }, 3000);
           }
         }
       }
+      if (cameraVars.ammo === 0) {
+        reload();
+      }
+    }
+
+    // Reload function
+    function reload() {
+      cameraVars.reloading = true;
+      setTimeout(() => {
+        cameraVars.ammo = cameraVars.maxAmmo;
+        document.getElementById('ammo').textContent = `Ammo: ${cameraVars.ammo} / ${cameraVars.maxAmmo}`;
+        cameraVars.reloading = false;
+      }, 2000); // 2 second reload time
+    }
+
+    // Collision check function
+    function checkCollision(newPosition) {
+      const playerBBox = new THREE.Box3(new THREE.Vector3(newPosition.x - 0.5, newPosition.y - 1, newPosition.z - 0.5), new THREE.Vector3(newPosition.x + 0.5, newPosition.y + 1, newPosition.z + 0.5));
+      for (let obstacle of obstacles) {
+        obstacle.userData.bbox.setFromObject(obstacle); // Update bbox if needed
+        if (playerBBox.intersectsBox(obstacle.userData.bbox)) {
+          return true;
+        }
+      }
+      return false;
     }
 
     // Game loop
     function animate() {
       requestAnimationFrame(animate);
 
-      // Player movement
+      // Player movement with collision
       const direction = new THREE.Vector3();
       if (keys['KeyW']) direction.z -= 1;
       if (keys['KeyS']) direction.z += 1;
       if (keys['KeyA']) direction.x -= 1;
       if (keys['KeyD']) direction.x += 1;
       direction.normalize().multiplyScalar(cameraVars.speed);
-      camera.position.add(direction.applyQuaternion(camera.quaternion));
+      const moveDelta = direction.applyQuaternion(camera.quaternion);
+      const newPosition = camera.position.clone().add(moveDelta);
+      if (!checkCollision(newPosition)) {
+        camera.position.copy(newPosition);
+      }
 
       // Jump
       if (keys['Space'] && cameraVars.canJump) {
@@ -178,28 +235,60 @@
       }
 
       // Gravity
-      cameraVars.velocity.y -= 0.01;
-      camera.position.y += cameraVars.velocity.y;
-      if (camera.position.y <= 1) {
-        camera.position.y = 1;
+      cameraVars.velocity.y -= 0.015; // Slightly stronger gravity
+      const newYPosition = camera.position.clone();
+      newYPosition.y += cameraVars.velocity.y;
+      if (newYPosition.y <= 1) {
+        newYPosition.y = 1;
         cameraVars.velocity.y = 0;
         cameraVars.canJump = true;
+      } else if (checkCollision(newYPosition)) {
+        cameraVars.velocity.y = 0;
       }
+      camera.position.y = newYPosition.y;
 
-      // Enemy movements and attacks
+      // Enemy chasing and attacks
       enemies.forEach(enemy => {
         if (enemy.userData.alive) {
-          // Simple patrol: back and forth
-          enemy.position.x += enemy.userData.direction * enemy.userData.speed;
-          if (Math.abs(enemy.position.x) > 50) {
-            enemy.userData.direction *= -1;
+          const distance = camera.position.distanceTo(enemy.position);
+          if (distance < enemy.userData.chaseRange) {
+            // Chase player
+            const dirToPlayer = camera.position.clone().sub(enemy.position).normalize();
+            const enemyMove = dirToPlayer.multiplyScalar(enemy.userData.speed);
+            const newEnemyPos = enemy.position.clone().add(enemyMove);
+            // Simple enemy collision with obstacles (optional, basic)
+            if (!checkCollision(newEnemyPos)) { // Reuse player collision func, adjust if needed
+              enemy.position.copy(newEnemyPos);
+            }
+          } else {
+            // Patrol if not chasing
+            enemy.position.x += (Math.random() - 0.5) * enemy.userData.speed * 2;
+            enemy.position.z += (Math.random() - 0.5) * enemy.userData.speed * 2;
           }
 
-          // Damage player if close
-          const distance = camera.position.distanceTo(enemy.position);
-          if (distance < 2 && cameraVars.health > 0) {
-            cameraVars.health -= 0.5;
+          // Damage if close
+          if (distance < 2.5 && cameraVars.health > 0) {
+            cameraVars.health -= 0.8; // Increased damage
             document.getElementById('health').textContent = `Health: ${Math.max(0, Math.floor(cameraVars.health))}`;
+          }
+        }
+      });
+
+      // Power-up collection
+      powerUps.forEach((powerUp, index) => {
+        if (powerUp.userData.active) {
+          const distance = camera.position.distanceTo(powerUp.position);
+          if (distance < 1.5) {
+            cameraVars.health = Math.min(100, cameraVars.health + powerUp.userData.value);
+            document.getElementById('health').textContent = `Health: ${Math.floor(cameraVars.health)}`;
+            powerUp.userData.active = false;
+            scene.remove(powerUp);
+            // Respawn power-up after 10 seconds
+            setTimeout(() => {
+              powerUp.userData.active = true;
+              powerUp.position.set(Math.random() * 280 - 140, 1, Math.random() * 280 - 140);
+              scene.add(powerUp);
+            }, 10000);
           }
         }
       });
@@ -207,7 +296,7 @@
       // Respawn player
       if (cameraVars.health <= 0) {
         cameraVars.health = 100;
-        camera.position.set(0, 1, 20);
+        camera.position.set(0, 1, 30);
         document.getElementById('health').textContent = `Health: ${cameraVars.health}`;
       }
 
