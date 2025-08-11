@@ -19,8 +19,8 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Player variables
-    let player = { health: 100, speed: 0.1, jumpHeight: 0.2, velocity: new THREE.Vector3(), canJump: true };
+    // Camera variables (formerly player)
+    let cameraVars = { health: 100, speed: 0.1, jumpHeight: 0.2, velocity: new THREE.Vector3(), canJump: true };
     camera.position.set(0, 1, 5);
 
     // Enemy (simple cube behind a wall)
@@ -30,9 +30,9 @@
     enemy.position.set(0, 0.5, -5);
     scene.add(enemy);
 
-    // Wall
+    // Wall (now grey)
     const wallGeometry = new THREE.BoxGeometry(10, 2, 0.2);
-    const wallMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const wallMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
     const wall = new THREE.Mesh(wallGeometry, wallMaterial);
     wall.position.set(0, 1, -2);
     scene.add(wall);
@@ -46,18 +46,31 @@
 
     // Keyboard controls
     const keys = {};
-    document.addEventListener('keydown', (e) => keys[e.code] = true);
+    document.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      if (e.code === 'Escape') {
+        document.exitPointerLock();
+      }
+    });
     document.addEventListener('keyup', (e) => keys[e.code] = false);
 
-    // Mouse look
+    // Mouse look with pointer lock
     let yaw = 0, pitch = 0;
-    document.addEventListener('mousemove', (e) => {
-      yaw -= e.movementX * 0.002;
-      pitch -= e.movementY * 0.002;
-      pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
-      camera.rotation.set(pitch, yaw, 0);
+    document.addEventListener('click', () => {
+      document.body.requestPointerLock();
     });
-    document.body.requestPointerLock();
+    document.addEventListener('mousemove', (e) => {
+      if (document.pointerLockElement === document.body) {
+        yaw -= e.movementX * 0.002;
+        pitch -= e.movementY * 0.002;
+        pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+        camera.rotation.set(pitch, yaw, 0);
+      }
+    });
+
+    // Enemy movement
+    let enemyDirection = 1;
+    const enemySpeed = 0.05;
 
     // Game loop
     function animate() {
@@ -69,36 +82,42 @@
       if (keys['KeyS']) direction.z += 1;
       if (keys['KeyA']) direction.x -= 1;
       if (keys['KeyD']) direction.x += 1;
-      direction.normalize().multiplyScalar(player.speed);
+      direction.normalize().multiplyScalar(cameraVars.speed);
       camera.position.add(direction.applyQuaternion(camera.quaternion));
 
       // Jump
-      if (keys['Space'] && player.canJump) {
-        player.velocity.y = player.jumpHeight;
-        player.canJump = false;
+      if (keys['Space'] && cameraVars.canJump) {
+        cameraVars.velocity.y = cameraVars.jumpHeight;
+        cameraVars.canJump = false;
       }
 
       // Gravity
-      player.velocity.y -= 0.01;
-      camera.position.y += player.velocity.y;
+      cameraVars.velocity.y -= 0.01;
+      camera.position.y += cameraVars.velocity.y;
       if (camera.position.y <= 1) {
         camera.position.y = 1;
-        player.velocity.y = 0;
-        player.canJump = true;
+        cameraVars.velocity.y = 0;
+        cameraVars.canJump = true;
+      }
+
+      // Enemy movement (back and forth along x-axis)
+      enemy.position.x += enemyDirection * enemySpeed;
+      if (enemy.position.x > 5 || enemy.position.x < -5) {
+        enemyDirection *= -1;
       }
 
       // Enemy "AI" (simple damage if close)
       const distance = camera.position.distanceTo(enemy.position);
-      if (distance < 2 && player.health > 0) {
-        player.health -= 0.5;
-        document.getElementById('health').textContent = Math.max(0, Math.floor(player.health));
+      if (distance < 2 && cameraVars.health > 0) {
+        cameraVars.health -= 0.5;
+        document.getElementById('health').textContent = Math.max(0, Math.floor(cameraVars.health));
       }
 
       // Respawn
-      if (player.health <= 0) {
-        player.health = 100;
+      if (cameraVars.health <= 0) {
+        cameraVars.health = 100;
         camera.position.set(0, 1, 5);
-        document.getElementById('health').textContent = player.health;
+        document.getElementById('health').textContent = cameraVars.health;
       }
 
       renderer.render(scene, camera);
