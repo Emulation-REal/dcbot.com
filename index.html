@@ -1,205 +1,116 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Discord Bot Dashboard</title>
-  <script src="https://unpkg.com/discord.js@14.15.3/dist/discord.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Simple 3D FPS Game</title>
   <style>
-    body {
-      background-color: #1a1a1a;
-      color: #ffffff;
-      font-family: 'Arial', sans-serif;
-    }
-    #messageArea {
-      max-height: 400px;
-      overflow-y: auto;
-    }
-    .server-item:hover, .channel-item:hover {
-      background-color: #2a2a2a;
-      cursor: pointer;
-    }
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+    #info { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4">
-  <div class="w-full max-w-4xl bg-gray-800 rounded-lg shadow-lg p-6">
-    <h1 class="text-3xl font-bold text-center mb-6">Discord Bot Dashboard</h1>
-    
-    <!-- Token Input Section -->
-    <div id="loginSection" class="mb-6">
-      <label for="botToken" class="block text-sm font-medium mb-2">Enter Bot Token</label>
-      <input type="password" id="botToken" class="w-full p-2 bg-gray-700 rounded text-white" placeholder="Bot Token">
-      <button onclick="loginBot()" class="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-        Login
-      </button>
-    </div>
-
-    <!-- Error Message -->
-    <div id="error" class="text-red-500 mb-4 hidden"></div>
-
-    <!-- Servers and Channels -->
-    <div id="dashboard" class="hidden">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Servers List -->
-        <div>
-          <h2 class="text-xl font-semibold mb-3">Servers</h2>
-          <ul id="serversList" class="space-y-2"></ul>
-        </div>
-        <!-- Channels List -->
-        <div>
-          <h2 class="text-xl font-semibold mb-3">Channels</h2>
-          <ul id="channelsList" class="space-y-2"></ul>
-        </div>
-      </div>
-
-      <!-- Message Input -->
-      <div class="mt-6">
-        <h2 class="text-xl font-semibold mb-3">Send Message</h2>
-        <textarea id="messageInput" class="w-full p-2 bg-gray-700 rounded text-white" placeholder="Type your message..." rows="3"></textarea>
-        <button onclick="sendMessage()" class="mt-3 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-          Send Message
-        </button>
-      </div>
-
-      <!-- Messages Display -->
-      <div class="mt-6">
-        <h2 class="text-xl font-semibold mb-3">Messages</h2>
-        <div id="messageArea" class="bg-gray-700 p-4 rounded"></div>
-      </div>
-    </div>
-  </div>
-
+<body>
+  <div id="info">Health: <span id="health">100</span></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script>
-    let client = null;
-    let selectedChannel = null;
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-    // Check if Discord.js loaded
-    window.addEventListener('load', () => {
-      if (!window.Discord || !window.Discord.Client) {
-        showError('Failed to load Discord.js. Please check your internet or try a different browser.');
-      }
+    // Player variables
+    let player = { health: 100, speed: 0.1, jumpHeight: 0.2, velocity: new THREE.Vector3(), canJump: true };
+    camera.position.set(0, 1, 5);
+
+    // Enemy (simple cube behind a wall)
+    const enemyGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const enemyMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
+    enemy.position.set(0, 0.5, -5);
+    scene.add(enemy);
+
+    // Wall
+    const wallGeometry = new THREE.BoxGeometry(10, 2, 0.2);
+    const wallMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+    wall.position.set(0, 1, -2);
+    scene.add(wall);
+
+    // Floor
+    const floorGeometry = new THREE.PlaneGeometry(20, 20);
+    const floorMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+
+    // Keyboard controls
+    const keys = {};
+    document.addEventListener('keydown', (e) => keys[e.code] = true);
+    document.addEventListener('keyup', (e) => keys[e.code] = false);
+
+    // Mouse look
+    let yaw = 0, pitch = 0;
+    document.addEventListener('mousemove', (e) => {
+      yaw -= e.movementX * 0.002;
+      pitch -= e.movementY * 0.002;
+      pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+      camera.rotation.set(pitch, yaw, 0);
     });
+    document.body.requestPointerLock();
 
-    function showError(message) {
-      const errorDiv = document.getElementById('error');
-      errorDiv.textContent = message;
-      errorDiv.classList.remove('hidden');
-      setTimeout(() => errorDiv.classList.add('hidden'), 7000);
-    }
+    // Game loop
+    function animate() {
+      requestAnimationFrame(animate);
 
-    async function loginBot() {
-      const token = document.getElementById('botToken').value.trim();
-      if (!token) {
-        showError('Please enter a valid bot token.');
-        return;
+      // Movement
+      const direction = new THREE.Vector3();
+      if (keys['KeyW']) direction.z -= 1;
+      if (keys['KeyS']) direction.z += 1;
+      if (keys['KeyA']) direction.x -= 1;
+      if (keys['KeyD']) direction.x += 1;
+      direction.normalize().multiplyScalar(player.speed);
+      camera.position.add(direction.applyQuaternion(camera.quaternion));
+
+      // Jump
+      if (keys['Space'] && player.canJump) {
+        player.velocity.y = player.jumpHeight;
+        player.canJump = false;
       }
 
-      if (!window.Discord || !window.Discord.Client) {
-        showError('Discord.js library failed to load. Please refresh or check your internet connection.');
-        return;
+      // Gravity
+      player.velocity.y -= 0.01;
+      camera.position.y += player.velocity.y;
+      if (camera.position.y <= 1) {
+        camera.position.y = 1;
+        player.velocity.y = 0;
+        player.canJump = true;
       }
 
-      try {
-        client = new window.Discord.Client({
-          intents: [
-            window.Discord.IntentsBitField.Flags.Guilds,
-            window.Discord.IntentsBitField.Flags.GuildMessages,
-            window.Discord.IntentsBitField.Flags.MessageContent
-          ]
-        });
-
-        client.on('ready', () => {
-          console.log(`Logged in as ${client.user.tag}`);
-          document.getElementById('loginSection').classList.add('hidden');
-          document.getElementById('dashboard').classList.remove('hidden');
-          loadServers();
-        });
-
-        client.on('messageCreate', (message) => {
-          if (message.channel.id === selectedChannel?.id && !message.author.bot) {
-            displayMessage(message);
-          }
-        });
-
-        await client.login(token);
-      } catch (error) {
-        showError('Failed to login. Invalid token or network issue. Check console for details.');
-        console.error(error);
+      // Enemy "AI" (simple damage if close)
+      const distance = camera.position.distanceTo(enemy.position);
+      if (distance < 2 && player.health > 0) {
+        player.health -= 0.5;
+        document.getElementById('health').textContent = Math.max(0, Math.floor(player.health));
       }
-    }
 
-    function loadServers() {
-      const serversList = document.getElementById('serversList');
-      serversList.innerHTML = '';
-      client.guilds.cache.forEach(guild => {
-        const li = document.createElement('li');
-        li.className = 'server-item p-2 bg-gray-600 rounded';
-        li.textContent = guild.name;
-        li.onclick = () => loadChannels(guild);
-        serversList.appendChild(li);
-      });
-    }
-
-    function loadChannels(guild) {
-      const channelsList = document.getElementById('channelsList');
-      channelsList.innerHTML = '';
-      guild.channels.cache
-        .filter(channel => channel.type === window.Discord.ChannelType.GuildText && channel.permissionsFor(client.user).has(window.Discord.PermissionsBitField.Flags.SendMessages))
-        .forEach(channel => {
-          const li = document.createElement('li');
-          li.className = 'channel-item p-2 bg-gray-600 rounded';
-          li.textContent = `#${channel.name}`;
-          li.onclick = () => {
-            selectedChannel = channel;
-            document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('bg-blue-600'));
-            li.classList.add('bg-blue-600');
-            loadMessages(channel);
-          };
-          channelsList.appendChild(li);
-        });
-    }
-
-    async function loadMessages(channel) {
-      const messageArea = document.getElementById('messageArea');
-      messageArea.innerHTML = '';
-      try {
-        const messages = await channel.messages.fetch({ limit: 10 });
-        messages.reverse().forEach(message => displayMessage(message));
-      } catch (error) {
-        showError('Failed to load messages. Check console for details.');
-        console.error(error);
+      // Respawn
+      if (player.health <= 0) {
+        player.health = 100;
+        camera.position.set(0, 1, 5);
+        document.getElementById('health').textContent = player.health;
       }
-    }
 
-    function displayMessage(message) {
-      const messageArea = document.getElementById('messageArea');
-      const div = document.createElement('div');
-      div.className = 'p-2 border-b border-gray-600';
-      div.innerHTML = `<strong>${message.author.tag}</strong>: ${message.content}`;
-      messageArea.appendChild(div);
-      messageArea.scrollTop = messageArea.scrollHeight;
+      renderer.render(scene, camera);
     }
+    animate();
 
-    async function sendMessage() {
-      if (!selectedChannel) {
-        showError('Please select a channel.');
-        return;
-      }
-      const messageInput = document.getElementById('messageInput');
-      const content = messageInput.value.trim();
-      if (!content) {
-        showError('Message cannot be empty.');
-        return;
-      }
-      try {
-        await selectedChannel.send(content);
-        messageInput.value = '';
-      } catch (error) {
-        showError('Failed to send message. Check console for details.');
-        console.error(error);
-      }
-    }
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
   </script>
 </body>
 </html>
