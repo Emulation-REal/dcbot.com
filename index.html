@@ -149,6 +149,7 @@
             <label><input type="checkbox" id="tracers"> Tracers</label>
             <label><input type="checkbox" id="esp"> ESP (Outlines)</label>
             <label><input type="checkbox" id="auto-hit"> Auto-Hit</label>
+            <label><input type="checkbox" id="infinite-time"> Infinite Time</label>
             <label>Sensitivity: <input type="range" id="sensitivity" min="0.001" max="0.005" step="0.0001" value="0.002"></label>
         </div>
         <div id="start-screen">
@@ -176,10 +177,12 @@
         const tracersCheckbox = document.getElementById('tracers');
         const espCheckbox = document.getElementById('esp');
         const autoHitCheckbox = document.getElementById('auto-hit');
+        const infiniteTimeCheckbox = document.getElementById('infinite-time');
         const sensitivitySlider = document.getElementById('sensitivity');
 
         // Three.js setup
         const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x1a1a2e, 1, 20);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -199,8 +202,8 @@
         const starsGeometry = new THREE.BufferGeometry();
         const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.05 });
         const starsVertices = [];
-        for (let i = 0; i < 500; i++) {
-            starsVertices.push((Math.random() - 0.5) * 100, (Math.random() - 0.5) * 100, (Math.random() - 0.5) * 100);
+        for (let i = 0; i < 1000; i++) {  // Increased stars for better environment
+            starsVertices.push((Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200);
         }
         starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
         const stars = new THREE.Points(starsGeometry, starsMaterial);
@@ -285,6 +288,50 @@
             }
         }
 
+        // Explosions
+        let explosions = [];
+
+        class Explosion {
+            constructor(position) {
+                this.particles = [];
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [];
+                const colors = [];
+                for (let i = 0; i < 50; i++) {
+                    vertices.push(0, 0, 0);
+                    colors.push(1, Math.random(), 0); // Orange-red particles
+                }
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+                const material = new THREE.PointsMaterial({ vertexColors: true, size: 0.05, transparent: true, opacity: 1 });
+                this.mesh = new THREE.Points(geometry, material);
+                this.mesh.position.copy(position);
+                scene.add(this.mesh);
+                this.velocities = [];
+                for (let i = 0; i < 50; i++) {
+                    const vel = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(Math.random() * 0.1 + 0.05);
+                    this.velocities.push(vel);
+                }
+                this.life = 1.0;
+            }
+            update() {
+                if (this.life <= 0) {
+                    scene.remove(this.mesh);
+                    return false;
+                }
+                this.life -= 0.02;
+                const positions = this.mesh.geometry.attributes.position.array;
+                for (let i = 0; i < positions.length; i += 3) {
+                    positions[i] += this.velocities[i / 3].x;
+                    positions[i + 1] += this.velocities[i / 3].y;
+                    positions[i + 2] += this.velocities[i / 3].z;
+                }
+                this.mesh.geometry.attributes.position.needsUpdate = true;
+                this.mesh.material.opacity = this.life;
+                return true;
+            }
+        }
+
         // Grid and targets
         let targets = [];
         let score = 0;
@@ -328,13 +375,11 @@
             if (tracersCheckbox.checked && targets.length > 0) {
                 targets.forEach(target => {
                     const geometry = new THREE.BufferGeometry().setFromPoints([
-                        new THREE.Vector3(0, 0, 0),
-                        target.mesh.position
+                        camera.position.clone(),
+                        target.mesh.position.clone()
                     ]);
                     const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
                     const line = new THREE.Line(geometry, material);
-                    line.position.copy(camera.position);
-                    line.quaternion.copy(camera.quaternion);
                     scene.add(line);
                     tracerLines.push(line);
                 });
@@ -374,7 +419,6 @@
 
         function aimAtTarget(target) {
             if (target) {
-                const direction = target.mesh.position.clone().sub(camera.position);
                 camera.lookAt(target.mesh.position);
             }
         }
@@ -384,6 +428,8 @@
             pointLight.position.x = Math.sin(Date.now() * 0.001) * 5;
             gridMaterial.opacity = 0.2 + 0.1 * Math.sin(Date.now() * 0.002);
             targets.forEach(target => target.update());
+            explosions.forEach(explosion => explosion.update());
+            explosions = explosions.filter(e => e.life > 0);
             updateTracers();
             updateESP();
             renderer.render(scene, camera);
@@ -417,19 +463,25 @@
             targets.forEach(target => scene.remove(target.mesh));
             tracerLines.forEach(line => scene.remove(line));
             espOutlines.forEach(outline => scene.remove(outline));
+            explosions.forEach(e => scene.remove(e.mesh));
             targets = [];
             tracerLines = [];
             espOutlines = [];
+            explosions = [];
             startGame();
         }
 
         function gameLoop(timestamp) {
             if (!gameRunning) return;
             if (timestamp - lastTime >= 1000) {
-                timeLeft--;
-                timeDisplay.textContent = `Time: ${timeLeft}`;
+                if (!infiniteTimeCheckbox.checked) {
+                    timeLeft--;
+                    timeDisplay.textContent = `Time: ${timeLeft}`;
+                    if (timeLeft <= 0) endGame();
+                } else {
+                    timeDisplay.textContent = 'Time: Infinite';
+                }
                 lastTime = timestamp;
-                if (timeLeft <= 0) endGame();
             }
             try {
                 update();
@@ -453,8 +505,10 @@
             if (hit) {
                 hitTarget = hitTarget || (intersects[0] ? targets.find(t => t.mesh === intersects[0].object) : targets[0]);
                 if (hitTarget) {
+                    const position = hitTarget.mesh.position.clone();
                     scene.remove(hitTarget.mesh);
                     targets = targets.filter(t => t !== hitTarget);
+                    explosions.push(new Explosion(position));
                     score++;
                     scoreDisplay.textContent = `Score: ${score}`;
                     playHitSound();
