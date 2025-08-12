@@ -1,536 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Aim Trainer - Grok Edition</title>
-    <style>
-        body {
-            margin: 0;
-            background: #111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: 'Orbitron', sans-serif;
-            overflow: hidden;
-        }
-        #game-container {
-            position: relative;
-            text-align: center;
-            width: 100vw;
-            height: 100vh;
-        }
-        canvas {
-            border: 2px solid #0ff;
-            box-shadow: 0 0 20px #0ff, 0 0 40px #f0f;
-            width: 100%;
-            height: 100%;
-        }
-        #score, #time {
-            position: absolute;
-            top: 10px;
-            color: #0ff;
-            font-size: 24px;
-            text-shadow: 0 0 10px #0ff;
-            z-index: 10;
-        }
-        #score { left: 20px; }
-        #time { right: 20px; }
-        #start-screen, #end-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            color: #0ff;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-size: 32px;
-            text-shadow: 0 0 10px #0ff;
-            z-index: 20;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 24px;
-            background: #0ff;
-            color: #111;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            box-shadow: 0 0 10px #0ff;
-            margin: 10px;
-        }
-        button:hover {
-            background: #f0f;
-            box-shadow: 0 0 15px #f0f;
-        }
-        #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
-            background: transparent;
-            z-index: 15;
-            pointer-events: none;
-        }
-        #crosshair::before, #crosshair::after,
-        #crosshair .top, #crosshair .bottom {
-            content: '';
-            position: absolute;
-            background: #0ff;
-            box-shadow: 0 0 5px #0ff;
-        }
-        #crosshair::before {
-            width: 2px;
-            height: 8px;
-            top: -10px;
-            left: 9px;
-        }
-        #crosshair::after {
-            width: 2px;
-            height: 8px;
-            top: 2px;
-            left: 9px;
-        }
-        #crosshair .top {
-            width: 8px;
-            height: 2px;
-            top: -1px;
-            left: 6px;
-        }
-        #crosshair .bottom {
-            width: 8px;
-            height: 2px;
-            top: 9px;
-            left: 6px;
-        }
-        #mod-menu {
-            position: absolute;
-            top: 50px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 1px solid #0ff;
-            padding: 15px;
-            color: #0ff;
-            font-size: 18px;
-            z-index: 15;
-            display: none;
-            box-shadow: 0 0 15px #0ff;
-            border-radius: 5px;
-        }
-        #mod-menu label {
-            display: block;
-            margin-bottom: 10px;
-        }
-        #mod-menu input[type="checkbox"] {
-            margin-right: 10px;
-        }
-        #mod-menu input[type="range"] {
-            width: 100%;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Xbox API Demo Starter</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 2rem; background: #121212; color: #eee; }
+    button { font-size: 1.2rem; padding: 1rem 2rem; background: #107c10; border: none; color: white; border-radius: 8px; cursor: pointer; }
+    #output { margin-top: 1rem; white-space: pre-wrap; background: #222; padding: 1rem; border-radius: 8px; }
+  </style>
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="gameCanvas"></canvas>
-        <div id="crosshair"><div class="top"></div><div class="bottom"></div></div>
-        <div id="score">Score: 0</div>
-        <div id="time">Time: 30</div>
-        <div id="mod-menu">
-            <h3>Mod Menu (Toggle: ;)</h3>
-            <label><input type="checkbox" id="aimbot"> Aimbot</label>
-            <label>Aimbot FOV: <input type="range" id="aimbot-fov" min="10" max="90" value="45"></label>
-            <label><input type="checkbox" id="tracers"> Tracers</label>
-            <label><input type="checkbox" id="esp"> ESP (Outlines)</label>
-            <label><input type="checkbox" id="auto-hit"> Auto-Hit</label>
-            <label><input type="checkbox" id="infinite-time"> Infinite Time</label>
-            <label>Sensitivity: <input type="range" id="sensitivity" min="0.001" max="0.005" step="0.0001" value="0.002"></label>
-        </div>
-        <div id="start-screen">
-            <h1>3D Aim Trainer - Grok Edition</h1>
-            <button onclick="startGame()">Start</button>
-        </div>
-        <div id="end-screen" style="display: none;">
-            <h1>Game Over</h1>
-            <p id="final-score"></p>
-            <button onclick="restartGame()">Restart</button>
-        </div>
-    </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const scoreDisplay = document.getElementById('score');
-        const timeDisplay = document.getElementById('time');
-        const startScreen = document.getElementById('start-screen');
-        const endScreen = document.getElementById('end-screen');
-        const finalScoreDisplay = document.getElementById('final-score');
-        const crosshair = document.getElementById('crosshair');
-        const modMenu = document.getElementById('mod-menu');
-        const aimbotCheckbox = document.getElementById('aimbot');
-        const aimbotFovSlider = document.getElementById('aimbot-fov');
-        const tracersCheckbox = document.getElementById('tracers');
-        const espCheckbox = document.getElementById('esp');
-        const autoHitCheckbox = document.getElementById('auto-hit');
-        const infiniteTimeCheckbox = document.getElementById('infinite-time');
-        const sensitivitySlider = document.getElementById('sensitivity');
 
-        // Three.js setup
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x1a1a2e, 1, 20);
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setClearColor(0x1a1a2e);
+<h1>Xbox API Demo (conceptual)</h1>
+<button id="loginBtn">Login with Xbox (Microsoft Account)</button>
+<pre id="output">Not logged in</pre>
 
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
-        scene.add(ambientLight);
-        const pointLight = new THREE.PointLight(0x0ff, 1, 50);
-        pointLight.position.set(0, 5, 5);
-        scene.add(pointLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
-        directionalLight.position.set(0, 10, 10);
-        scene.add(directionalLight);
+<script>
+  const clientId = 'YOUR_MICROSOFT_APP_CLIENT_ID'; // Replace with your app's client id
+  const redirectUri = window.location.origin + window.location.pathname; // Your site URL
 
-        // Starry background
-        const starsGeometry = new THREE.BufferGeometry();
-        const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.05 });
-        const starsVertices = [];
-        for (let i = 0; i < 1000; i++) {  // Increased stars for better environment
-            starsVertices.push((Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200);
-        }
-        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
-        const stars = new THREE.Points(starsGeometry, starsMaterial);
-        scene.add(stars);
+  // Scopes needed for Xbox Live
+  const scopes = [
+    'XboxLive.signin',
+    'XboxLive.offline_access',
+    'User.Read'
+  ];
 
-        // Reflective floor
-        const floorGeometry = new THREE.PlaneGeometry(20, 20);
-        const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x222244, roughness: 0.1, metalness: 0.8 });
-        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-        floor.rotation.x = -Math.PI / 2;
-        floor.position.y = -3;
-        scene.add(floor);
+  // Simple OAuth implicit flow URL
+  function getOAuthUrl() {
+    return `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?` +
+      `client_id=${encodeURIComponent(clientId)}` +
+      `&response_type=token` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&scope=${encodeURIComponent(scopes.join(' '))}` +
+      `&response_mode=fragment` +
+      `&state=12345` +
+      `&prompt=select_account`;
+  }
 
-        // Subtle spawn grid outline
-        const gridGeometry = new THREE.BufferGeometry();
-        const gridVertices = [];
-        const GRID_SIZE = 3;
-        const GRID_SPACING = 2;
-        for (let x = 0; x <= GRID_SIZE; x++) {
-            gridVertices.push((x - GRID_SIZE / 2) * GRID_SPACING, -GRID_SIZE / 2 * GRID_SPACING, -5);
-            gridVertices.push((x - GRID_SIZE / 2) * GRID_SPACING, GRID_SIZE / 2 * GRID_SPACING, -5);
-            gridVertices.push((-GRID_SIZE / 2) * GRID_SPACING, (x - GRID_SIZE / 2) * GRID_SPACING, -5);
-            gridVertices.push((GRID_SIZE / 2) * GRID_SPACING, (x - GRID_SIZE / 2) * GRID_SPACING, -5);
-        }
-        gridGeometry.setAttribute('position', new THREE.Float32BufferAttribute(gridVertices, 3));
-        const gridMaterial = new THREE.LineBasicMaterial({ color: 0x0ff, opacity: 0.2, transparent: true });
-        const gridLines = new THREE.LineSegments(gridGeometry, gridMaterial);
-        scene.add(gridLines);
+  // Parse URL hash for access token
+  function parseHash() {
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    return {
+      access_token: params.get('access_token'),
+      expires_in: params.get('expires_in'),
+      token_type: params.get('token_type'),
+      state: params.get('state')
+    };
+  }
 
-        // Camera controls
-        let isLocked = false;
-        let sensitivity = parseFloat(sensitivitySlider.value);
-        let aimbotFov = parseFloat(aimbotFovSlider.value);
-        sensitivitySlider.addEventListener('input', () => {
-            sensitivity = parseFloat(sensitivitySlider.value);
-        });
-        aimbotFovSlider.addEventListener('input', () => {
-            aimbotFov = parseFloat(aimbotFovSlider.value);
-        });
-        document.addEventListener('click', () => {
-            if (!isLocked && gameRunning && modMenu.style.display !== 'block') {
-                canvas.requestPointerLock();
-            }
-        });
-        document.addEventListener('pointerlockchange', () => {
-            isLocked = document.pointerLockElement === canvas;
-            crosshair.style.display = isLocked ? 'block' : 'none';
-        });
-        document.addEventListener('mousemove', (e) => {
-            if (isLocked && gameRunning) {
-                camera.rotation.y -= e.movementX * sensitivity;
-                camera.rotation.x -= e.movementY * sensitivity;
-                camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
-            }
-        });
+  // Show user Xbox profile (mock example using Microsoft Graph User API)
+  async function fetchUserProfile(accessToken) {
+    const res = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    if(!res.ok) throw new Error('Failed to fetch profile');
+    return await res.json();
+  }
 
-        // Mod menu toggle
-        document.addEventListener('keydown', (e) => {
-            if (e.key === ';') {
-                modMenu.style.display = modMenu.style.display === 'block' ? 'none' : 'block';
-                if (modMenu.style.display === 'block' && isLocked) document.exitPointerLock();
-            }
-        });
+  document.getElementById('loginBtn').onclick = () => {
+    window.location.href = getOAuthUrl();
+  };
 
-        // Audio setup
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        let hitSoundBuffer = null;
-        fetch('https://freesound.org/data/previews/387/387739_5121236-lq.mp3')
-            .then(response => response.arrayBuffer())
-            .then(buffer => audioContext.decodeAudioData(buffer))
-            .then(decoded => {
-                hitSoundBuffer = decoded;
-            })
-            .catch(err => console.error('Audio load error:', err));
+  (async () => {
+    const tokenData = parseHash();
+    if(tokenData.access_token) {
+      document.getElementById('output').textContent = 'Fetching Xbox profile...';
+      try {
+        const profile = await fetchUserProfile(tokenData.access_token);
+        document.getElementById('output').textContent = JSON.stringify(profile, null, 2);
+      } catch(e) {
+        document.getElementById('output').textContent = 'Error fetching profile: ' + e.message;
+      }
+    }
+  })();
+</script>
 
-        function playHitSound() {
-            if (hitSoundBuffer) {
-                const source = audioContext.createBufferSource();
-                source.buffer = hitSoundBuffer;
-                source.connect(audioContext.destination);
-                source.start(0);
-            }
-        }
-
-        // Explosions
-        let explosions = [];
-
-        class Explosion {
-            constructor(position) {
-                this.particles = [];
-                const geometry = new THREE.BufferGeometry();
-                const vertices = [];
-                const colors = [];
-                for (let i = 0; i < 50; i++) {
-                    vertices.push(0, 0, 0);
-                    colors.push(1, Math.random(), 0); // Orange-red particles
-                }
-                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-                geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-                const material = new THREE.PointsMaterial({ vertexColors: true, size: 0.05, transparent: true, opacity: 1 });
-                this.mesh = new THREE.Points(geometry, material);
-                this.mesh.position.copy(position);
-                scene.add(this.mesh);
-                this.velocities = [];
-                for (let i = 0; i < 50; i++) {
-                    const vel = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(Math.random() * 0.1 + 0.05);
-                    this.velocities.push(vel);
-                }
-                this.life = 1.0;
-            }
-            update() {
-                if (this.life <= 0) {
-                    scene.remove(this.mesh);
-                    return false;
-                }
-                this.life -= 0.02;
-                const positions = this.mesh.geometry.attributes.position.array;
-                for (let i = 0; i < positions.length; i += 3) {
-                    positions[i] += this.velocities[i / 3].x;
-                    positions[i + 1] += this.velocities[i / 3].y;
-                    positions[i + 2] += this.velocities[i / 3].z;
-                }
-                this.mesh.geometry.attributes.position.needsUpdate = true;
-                this.mesh.material.opacity = this.life;
-                return true;
-            }
-        }
-
-        // Grid and targets
-        let targets = [];
-        let score = 0;
-        let timeLeft = 30;
-        let gameRunning = false;
-        let lastTime = 0;
-        let tracerLines = [];
-        let espOutlines = [];
-
-        class Target {
-            constructor() {
-                this.gridX = Math.floor(Math.random() * GRID_SIZE);
-                this.gridY = Math.floor(Math.random() * GRID_SIZE);
-                this.geometry = new THREE.SphereGeometry(0.2, 32, 32);
-                this.material = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.7 });
-                this.mesh = new THREE.Mesh(this.geometry, this.material);
-                this.mesh.position.set(
-                    (this.gridX - GRID_SIZE / 2 + 0.5) * GRID_SPACING,
-                    (this.gridY - GRID_SIZE / 2 + 0.5) * GRID_SPACING,
-                    -5 + (Math.random() - 0.5) * 2
-                );
-                this.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.01, (Math.random() - 0.5) * 0.01, 0);
-                scene.add(this.mesh);
-            }
-            update() {
-                this.mesh.position.add(this.velocity);
-                if (this.mesh.position.x < -GRID_SIZE / 2 * GRID_SPACING || this.mesh.position.x > GRID_SIZE / 2 * GRID_SPACING) this.velocity.x *= -1;
-                if (this.mesh.position.y < -GRID_SIZE / 2 * GRID_SPACING || this.mesh.position.y > GRID_SIZE / 2 * GRID_SPACING) this.velocity.y *= -1;
-            }
-        }
-
-        function spawnTarget() {
-            if (targets.length < 1) {
-                targets.push(new Target());
-            }
-        }
-
-        function updateTracers() {
-            tracerLines.forEach(line => scene.remove(line));
-            tracerLines = [];
-            if (tracersCheckbox.checked && targets.length > 0) {
-                targets.forEach(target => {
-                    const geometry = new THREE.BufferGeometry().setFromPoints([
-                        camera.position.clone(),
-                        target.mesh.position.clone()
-                    ]);
-                    const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
-                    const line = new THREE.Line(geometry, material);
-                    scene.add(line);
-                    tracerLines.push(line);
-                });
-            }
-        }
-
-        function updateESP() {
-            espOutlines.forEach(outline => scene.remove(outline));
-            espOutlines = [];
-            if (espCheckbox.checked && targets.length > 0) {
-                targets.forEach(target => {
-                    const edges = new THREE.EdgesGeometry(target.geometry);
-                    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
-                    const outline = new THREE.LineSegments(edges, lineMaterial);
-                    outline.position.copy(target.mesh.position);
-                    scene.add(outline);
-                    espOutlines.push(outline);
-                });
-            }
-        }
-
-        function getNearestTargetInFOV() {
-            if (targets.length === 0) return null;
-            let nearest = null;
-            let minAngle = Infinity;
-            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-            targets.forEach(target => {
-                const dir = target.mesh.position.clone().sub(camera.position).normalize();
-                const angle = forward.angleTo(dir) * (180 / Math.PI);
-                if (angle <= aimbotFov / 2 && angle < minAngle) {
-                    minAngle = angle;
-                    nearest = target;
-                }
-            });
-            return nearest;
-        }
-
-        function aimAtTarget(target) {
-            if (target) {
-                camera.lookAt(target.mesh.position);
-            }
-        }
-
-        function update() {
-            stars.rotation.y += 0.0005;
-            pointLight.position.x = Math.sin(Date.now() * 0.001) * 5;
-            gridMaterial.opacity = 0.2 + 0.1 * Math.sin(Date.now() * 0.002);
-            targets.forEach(target => target.update());
-            explosions.forEach(explosion => explosion.update());
-            explosions = explosions.filter(e => e.life > 0);
-            updateTracers();
-            updateESP();
-            renderer.render(scene, camera);
-        }
-
-        function startGame() {
-            startScreen.style.display = 'none';
-            modMenu.style.display = 'none';
-            gameRunning = true;
-            score = 0;
-            targets = [];
-            timeLeft = 30;
-            scoreDisplay.textContent = `Score: ${score}`;
-            timeDisplay.textContent = `Time: ${timeLeft}`;
-            camera.position.set(0, 0, 0);
-            camera.lookAt(0, 0, -5);
-            spawnTarget();
-            lastTime = performance.now();
-            requestAnimationFrame(gameLoop);
-        }
-
-        function endGame() {
-            gameRunning = false;
-            finalScoreDisplay.textContent = `Final Score: ${score}`;
-            endScreen.style.display = 'flex';
-            document.exitPointerLock();
-        }
-
-        function restartGame() {
-            endScreen.style.display = 'none';
-            targets.forEach(target => scene.remove(target.mesh));
-            tracerLines.forEach(line => scene.remove(line));
-            espOutlines.forEach(outline => scene.remove(outline));
-            explosions.forEach(e => scene.remove(e.mesh));
-            targets = [];
-            tracerLines = [];
-            espOutlines = [];
-            explosions = [];
-            startGame();
-        }
-
-        function gameLoop(timestamp) {
-            if (!gameRunning) return;
-            if (timestamp - lastTime >= 1000) {
-                if (!infiniteTimeCheckbox.checked) {
-                    timeLeft--;
-                    timeDisplay.textContent = `Time: ${timeLeft}`;
-                    if (timeLeft <= 0) endGame();
-                } else {
-                    timeDisplay.textContent = 'Time: Infinite';
-                }
-                lastTime = timestamp;
-            }
-            try {
-                update();
-            } catch (e) {
-                console.error('Render error:', e);
-            }
-            requestAnimationFrame(gameLoop);
-        }
-
-        canvas.addEventListener('click', () => {
-            if (!gameRunning || !isLocked || modMenu.style.display === 'block') return;
-            let hitTarget = null;
-            if (aimbotCheckbox.checked) {
-                hitTarget = getNearestTargetInFOV();
-                if (hitTarget) aimAtTarget(hitTarget);
-            }
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-            const intersects = raycaster.intersectObjects(targets.map(t => t.mesh));
-            let hit = autoHitCheckbox.checked || intersects.length > 0;
-            if (hit) {
-                hitTarget = hitTarget || (intersects[0] ? targets.find(t => t.mesh === intersects[0].object) : targets[0]);
-                if (hitTarget) {
-                    const position = hitTarget.mesh.position.clone();
-                    scene.remove(hitTarget.mesh);
-                    targets = targets.filter(t => t !== hitTarget);
-                    explosions.push(new Explosion(position));
-                    score++;
-                    scoreDisplay.textContent = `Score: ${score}`;
-                    playHitSound();
-                    spawnTarget();
-                    renderer.setClearColor(0x00ff00);
-                    setTimeout(() => renderer.setClearColor(0x1a1a2e), 50);
-                }
-            }
-        });
-
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // Load custom font
-        const fontLink = document.createElement('link');
-        fontLink.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap';
-        fontLink.rel = 'stylesheet';
-        document.head.appendChild(fontLink);
-    </script>
 </body>
 </html>
