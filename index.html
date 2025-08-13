@@ -3,43 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Piano Pitch Challenge</title>
+    <title>Piano Key Detector Game</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+        .piano {
+            display: flex;
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            height: 200px;
+            margin: 20px auto;
+            border: 2px solid #000;
+            background-color: #fff;
+            overflow-x: auto;
         }
-        .pulse {
-            animation: pulse 1s infinite;
+        .key {
+            position: relative;
+            flex: 1;
+            border: 1px solid #000;
+            box-sizing: border-box;
+            transition: background-color 0.3s;
         }
-        #detectedNotes, #targetNotes {
-            transition: all 0.3s ease;
+        .white {
+            height: 100%;
+            background-color: white;
+            color: black;
+            z-index: 1;
         }
-        #detectedNotes:hover, #targetNotes:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        .black {
+            position: absolute;
+            width: 50%;
+            height: 60%;
+            background-color: black;
+            color: white;
+            z-index: 2;
+            left: 75%;
+            transform: translateX(-50%);
         }
-        #toggleButton.listening {
-            background-color: #ef4444 !important;
-            animation: pulse 1s infinite;
+        .active {
+            background-color: #4CAF50 !important;
+        }
+        .key-label {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
         }
     </style>
 </head>
 <body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen flex flex-col items-center justify-center p-4">
-    <h1 class="text-4xl font-bold text-white mb-6">Piano Pitch Challenge!</h1>
+    <h1 class="text-4xl font-bold text-white mb-6">Piano Key Detector Game</h1>
     <div class="flex flex-col items-center space-y-4 mb-4">
-        <div id="score" class="text-2xl font-semibold text-white">Score: 0</div>
-        <div id="timer" class="text-xl font-medium text-white">Time: 10s</div>
-        <div id="targetNotes" class="bg-white text-gray-800 p-4 rounded-lg w-full max-w-md text-center text-lg font-medium"></div>
         <div class="flex space-x-4">
-            <button id="toggleButton" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">Start Game</button>
+            <button id="toggleButton" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">Start Detection</button>
             <button id="clearButton" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">Clear</button>
-            <button id="downloadButton" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">Download Score</button>
         </div>
-        <div id="detectedNotes" class="bg-white text-gray-800 p-4 rounded-lg w-full max-w-md min-h-[150px] text-lg"></div>
+        <div id="detectedNote" class="text-2xl font-semibold text-white">Detected Note: None</div>
+        <div id="pianoKeyboard" class="piano"></div>
         <div id="errorMessage" class="text-red-300 text-center max-w-md"></div>
     </div>
 
@@ -54,34 +75,52 @@
             let analyser = null;
             let source = null;
             let isAnalyzing = false;
-            let score = 0;
-            let timer = 10;
-            let timerInterval = null;
-            const notes = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5']; // Simplified note set
-            let currentNote = '';
-            let detectedNotes = [];
-
             const button = document.getElementById('toggleButton');
             const clearButton = document.getElementById('clearButton');
-            const downloadButton = document.getElementById('downloadButton');
-            const detectedNotesDiv = document.getElementById('detectedNotes');
-            const targetNotesDiv = document.getElementById('targetNotes');
-            const scoreDiv = document.getElementById('score');
-            const timerDiv = document.getElementById('timer');
+            const detectedNoteDiv = document.getElementById('detectedNote');
             const errorDiv = document.getElementById('errorMessage');
+            const pianoKeyboard = document.getElementById('pianoKeyboard');
+            let currentNote = null;
 
-            // Piano note frequencies (A4 = 440 Hz)
-            const noteFrequencies = {
-                'C4': 261.63, 'C#4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'E4': 329.63,
-                'F4': 349.23, 'F#4': 369.99, 'G4': 392.00, 'G#4': 415.30, 'A4': 440.00,
-                'A#4': 466.16, 'B4': 493.88, 'C5': 523.25
-            };
+            // Generate piano notes and frequencies (A0 = 27.5 Hz to C8 = 4186 Hz)
+            const notes = [];
+            const noteNames = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
+            for (let octave = 0; octave <= 8; octave++) {
+                noteNames.forEach((name, index) => {
+                    if (octave === 0 && index < 3) return; // A0 start
+                    if (octave === 8 && index > 3) return; // C8 end
+                    notes.push(`${name}${octave}`);
+                });
+            }
+            const frequencies = notes.map((note, i) => 27.5 * Math.pow(2, i / 12)); // A0 = 27.5 Hz
+
+            // Create piano keyboard UI
+            function createPianoKeys() {
+                let whiteKeyIndex = 0;
+                notes.forEach((note, index) => {
+                    const isBlack = note.includes('#');
+                    const key = document.createElement('div');
+                    key.classList.add('key', isBlack ? 'black' : 'white');
+                    key.dataset.note = note;
+                    key.dataset.index = index;
+                    const label = document.createElement('div');
+                    label.classList.add('key-label');
+                    label.textContent = note;
+                    key.appendChild(label);
+                    if (!isBlack) {
+                        key.style.flex = '1';
+                        whiteKeyIndex++;
+                    }
+                    pianoKeyboard.appendChild(key);
+                });
+            }
+            createPianoKeys();
 
             async function checkMicPermission() {
                 try {
                     const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
                     if (permissionStatus.state === 'denied') {
-                        const errorMsg = 'Microphone access denied. Go to Edge Settings > Cookies and site permissions > Microphone.';
+                        const errorMsg = 'Microphone access denied. Go to browser settings > Privacy > Microphone.';
                         errorDiv.textContent = errorMsg;
                         console.error(errorMsg);
                         return false;
@@ -98,77 +137,77 @@
                 }
             }
 
-            function getRandomNote() {
-                return notes[Math.floor(Math.random() * notes.length)];
-            }
-
-            function startTimer() {
-                timer = 10;
-                timerDiv.textContent = `Time: ${timer}s`;
-                timerInterval = setInterval(() => {
-                    timer--;
-                    timerDiv.textContent = `Time: ${timer}s`;
-                    if (timer <= 0) {
-                        stopAnalysis();
-                        errorDiv.textContent = 'Time’s up! Try again.';
-                        confetti({ particleCount: 50, spread: 30, colors: ['#ff0000'] });
-                    }
-                }, 1000);
-            }
-
-            function stopTimer() {
-                if (timerInterval) {
-                    clearInterval(timerInterval);
-                    timerInterval = null;
-                }
-            }
-
-            // Simple autocorrelation-based pitch detection
-            function detectPitch(audioData, sampleRate) {
-                const SIZE = audioData.length;
+            // Autocorrelation pitch detection
+            function detectPitch(buffer, sampleRate) {
+                const SIZE = buffer.length;
                 const MAX_SAMPLES = Math.floor(SIZE / 2);
-                const MIN_SAMPLES = 20;
+                const MIN_SAMPLES = 2;
                 let bestOffset = -1;
                 let bestCorrelation = 0;
                 let rms = 0;
+                let foundGoodCorrelation = false;
+                let correlations = new Array(MAX_SAMPLES);
 
-                // Calculate RMS to check signal strength
                 for (let i = 0; i < SIZE; i++) {
-                    rms += audioData[i] * audioData[i];
+                    rms += buffer[i] * buffer[i];
                 }
                 rms = Math.sqrt(rms / SIZE);
                 if (rms < 0.01) return null; // Too quiet
 
-                // Autocorrelation
+                let lastCorrelation = 1;
                 for (let offset = MIN_SAMPLES; offset < MAX_SAMPLES; offset++) {
                     let correlation = 0;
                     for (let i = 0; i < SIZE - offset; i++) {
-                        correlation += Math.abs(audioData[i] * audioData[i + offset]);
+                        correlation += Math.abs(buffer[i] * buffer[i + offset]);
                     }
-                    correlation = correlation / (SIZE - offset);
-                    if (correlation > bestCorrelation) {
-                        bestCorrelation = correlation;
-                        bestOffset = offset;
+                    correlation = correlation / SIZE;
+                    correlations[offset] = correlation;
+                    if ((correlation > 0.2) && (correlation > lastCorrelation)) {
+                        foundGoodCorrelation = true;
+                        if (correlation > bestCorrelation) {
+                            bestCorrelation = correlation;
+                            bestOffset = offset;
+                        }
+                    } else if (foundGoodCorrelation) {
+                        // Parabolic interpolation for better accuracy
+                        const shift = (correlations[bestOffset + 1] - correlations[bestOffset - 1]) / (2 * correlations[bestOffset]);
+                        return sampleRate / (bestOffset + shift);
                     }
+                    lastCorrelation = correlation;
                 }
-
-                if (bestCorrelation < 0.1) return null; // Weak correlation
-                const frequency = sampleRate / bestOffset;
-                return frequency;
+                if (bestCorrelation > 0.01) {
+                    return sampleRate / bestOffset;
+                }
+                return null;
             }
 
             function frequencyToNote(frequency) {
                 if (!frequency) return null;
-                let closestNote = null;
+                let closestIndex = 0;
                 let minDiff = Infinity;
-                for (const [note, freq] of Object.entries(noteFrequencies)) {
+                frequencies.forEach((freq, index) => {
                     const diff = Math.abs(frequency - freq);
                     if (diff < minDiff) {
                         minDiff = diff;
-                        closestNote = note;
+                        closestIndex = index;
                     }
+                });
+                return notes[closestIndex];
+            }
+
+            function highlightKey(note) {
+                if (currentNote) {
+                    const prevKey = document.querySelector(`[data-note="${currentNote}"]`);
+                    if (prevKey) prevKey.classList.remove('active');
                 }
-                return closestNote;
+                currentNote = note;
+                if (note) {
+                    const key = document.querySelector(`[data-note="${note}"]`);
+                    if (key) key.classList.add('active');
+                    detectedNoteDiv.textContent = `Detected Note: ${note}`;
+                } else {
+                    detectedNoteDiv.textContent = 'Detected Note: None';
+                }
             }
 
             async function startAnalysis() {
@@ -178,37 +217,18 @@
                     analyser = audioContext.createAnalyser();
                     analyser.fftSize = 2048;
                     source = audioContext.createMediaStreamSource(stream);
-
                     source.connect(analyser);
-                    currentNote = getRandomNote();
-                    targetNotesDiv.textContent = `Play: ${currentNote}`;
-                    detectedNotes = [];
-                    detectedNotesDiv.innerHTML = 'Listening...';
                     isAnalyzing = true;
-                    button.textContent = 'Stop Game';
-                    button.classList.add('listening');
+                    button.textContent = 'Stop Detection';
                     console.log('Started pitch detection...');
                     errorDiv.textContent = '';
-                    startTimer();
-
                     const buffer = new Float32Array(analyser.fftSize);
                     function analyze() {
                         if (!isAnalyzing) return;
                         analyser.getFloatTimeDomainData(buffer);
                         const pitch = detectPitch(buffer, audioContext.sampleRate);
                         const note = frequencyToNote(pitch);
-                        if (note && !detectedNotes.includes(note)) {
-                            detectedNotes.push(note);
-                            detectedNotesDiv.textContent = `Detected: ${detectedNotes.join(', ')}`;
-                            if (note === currentNote) {
-                                score += 10;
-                                scoreDiv.textContent = `Score: ${score}`;
-                                confetti({ particleCount: 100, spread: 70 });
-                                errorDiv.textContent = 'Perfect pitch! New note coming up!';
-                                stopAnalysis();
-                                setTimeout(startNewRound, 1000);
-                            }
-                        }
+                        highlightKey(note);
                         requestAnimationFrame(analyze);
                     }
                     analyze();
@@ -220,19 +240,12 @@
             }
 
             function stopAnalysis() {
-                if (source) {
-                    source.disconnect();
-                    source = null;
-                }
-                if (audioContext) {
-                    audioContext.close();
-                    audioContext = null;
-                }
+                if (source) source.disconnect();
+                if (audioContext) audioContext.close();
                 isAnalyzing = false;
-                button.textContent = 'Start Game';
-                button.classList.remove('listening');
+                button.textContent = 'Start Detection';
                 console.log('Stopped pitch detection.');
-                stopTimer();
+                highlightKey(null);
             }
 
             async function toggleAnalysis() {
@@ -246,32 +259,11 @@
                 }
             }
 
-            function startNewRound() {
-                if (isAnalyzing) return;
-                toggleAnalysis();
-            }
-
             button.onclick = toggleAnalysis;
 
             clearButton.onclick = () => {
-                detectedNotes = [];
-                score = 0;
-                scoreDiv.textContent = `Score: ${score}`;
-                detectedNotesDiv.innerHTML = '';
-                targetNotesDiv.textContent = '';
+                highlightKey(null);
                 errorDiv.textContent = '';
-                stopAnalysis();
-            };
-
-            downloadButton.onclick = () => {
-                const text = `Piano Pitch Challenge Score: ${score}\nDetected Notes:\n${detectedNotes.join('\n')}`;
-                const blob = new Blob([text], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'piano-game-score.txt';
-                a.click();
-                URL.revokeObjectURL(url);
             };
         }
     </script>
