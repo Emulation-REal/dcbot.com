@@ -3,268 +3,406 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emulation Helper Bot - Discord Server Manager</title>
+    <title>Emulation Helper Bot - Ultimate Discord Server Manager</title>
+    <link rel="icon" type="image/png" href="https://discord.com/assets/2c21aeda16de354ba93c.png">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary-color: #5865F2; /* Discord purple */
-            --secondary-color: #36393F; /* Dark background */
-            --text-color: #FFFFFF;
-            --accent-color: #00FF88;
-            --bg-color: #202225;
+            --secondary-color: #2C2F33; /* Darker Discord gray */
+            --accent-color: #00FF88; /* Neon green */
+            --text-color: #DCDFE4;
+            --bg-color: #18191C;
             --card-bg: #2F3136;
-            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            font-family: var(--font-family);
-            margin: 0;
-            padding: 0;
+            font-family: 'Poppins', sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
+            overflow-x: hidden;
         }
 
-        header {
-            background: linear-gradient(135deg, var(--primary-color), #7289DA);
-            text-align: center;
-            padding: 80px 20px;
-            position: relative;
-            overflow: hidden;
+        /* Navigation Bar */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(32, 34, 37, 0.95);
+            backdrop-filter: blur(12px);
+            padding: 15px 30px;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
 
-        header h1 {
-            font-size: 3em;
-            margin: 0;
-            animation: fadeInDown 1s ease-out;
+        nav .logo {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--accent-color);
+            letter-spacing: 1px;
         }
 
-        header p {
-            font-size: 1.5em;
-            margin: 10px 0;
-            animation: fadeInUp 1s ease-out 0.5s;
-            animation-fill-mode: both;
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 25px;
+        }
+
+        nav a {
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1em;
+            transition: color 0.3s, transform 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--accent-color);
+            transform: translateY(-2px);
         }
 
         .invite-btn {
-            background-color: var(--accent-color);
+            background: linear-gradient(90deg, var(--accent-color), #00CC70);
             color: #000;
-            padding: 15px 30px;
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: bold;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: 600;
             transition: transform 0.3s, box-shadow 0.3s;
-            display: inline-block;
-            margin-top: 20px;
         }
 
         .invite-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+            transform: scale(1.1);
+            box-shadow: 0 0 20px var(--accent-color);
         }
 
+        /* Header with Parallax and Particles */
+        header {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: url('https://images.unsplash.com/photo-1511497580566-9c03da7b68b6') no-repeat center/cover fixed;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(88, 101, 242, 0.6), rgba(0, 255, 136, 0.2));
+            z-index: 1;
+        }
+
+        header .content {
+            position: relative;
+            z-index: 2;
+            max-width: 800px;
+        }
+
+        header h1 {
+            font-size: 4em;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            animation: fadeInDown 1.2s ease-out;
+        }
+
+        header p {
+            font-size: 1.6em;
+            margin-bottom: 30px;
+            text-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+            animation: fadeInUp 1.2s ease-out 0.3s;
+            animation-fill-mode: both;
+        }
+
+        #particles-js {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* Sections */
         section {
-            padding: 40px 20px;
-            max-width: 1200px;
+            padding: 80px 20px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
         h2 {
             text-align: center;
-            font-size: 2.5em;
-            margin-bottom: 30px;
+            font-size: 3em;
             color: var(--accent-color);
+            margin-bottom: 50px;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        #overview {
+            background: var(--secondary-color);
         }
 
         #overview ul {
-            list-style-type: none;
-            padding: 0;
+            list-style: none;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
         }
 
         #overview li {
             background: var(--card-bg);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            transition: transform 0.3s;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
         #overview li:hover {
-            transform: translateY(-5px);
+            transform: translateY(-10px);
+            box-shadow: 0 12px 30px rgba(0, 255, 136, 0.2);
         }
 
         #commands {
-            background: var(--secondary-color);
+            background: url('https://images.unsplash.com/photo-1546484396-fb3fc3a8d29e') no-repeat center/cover fixed;
         }
 
         .command-search {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
 
         .command-search input {
-            width: 80%;
-            max-width: 500px;
-            padding: 10px;
-            border-radius: 5px;
+            width: 90%;
+            max-width: 700px;
+            padding: 15px;
             border: none;
-            font-size: 1em;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            font-size: 1.2em;
+            transition: background 0.3s;
+        }
+
+        .command-search input:focus {
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
         }
 
         .command-categories {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
         }
 
         .category {
             background: var(--card-bg);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s;
+        }
+
+        .category:hover {
+            transform: translateY(-5px);
         }
 
         .category h3 {
             color: var(--accent-color);
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            font-size: 1.8em;
         }
 
         .category ul {
-            list-style-type: none;
-            padding: 0;
+            list-style: none;
         }
 
         .category li {
-            margin-bottom: 10px;
-            padding: 10px;
+            padding: 15px;
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 5px;
-            transition: background 0.3s;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            transition: background 0.3s, transform 0.3s;
         }
 
         .category li:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 255, 136, 0.2);
+            transform: translateX(5px);
         }
 
         #invite {
+            background: var(--secondary-color);
             text-align: center;
         }
 
-        #contact form {
-            display: flex;
-            flex-direction: column;
-            max-width: 600px;
-            margin: 0 auto;
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 10px;
-        }
-
-        #contact input, #contact textarea {
-            margin-bottom: 15px;
-            padding: 15px;
-            border: none;
-            border-radius: 5px;
-            background: var(--secondary-color);
-            color: var(--text-color);
-        }
-
-        #contact button {
-            background-color: var(--accent-color);
-            color: #000;
-            border: none;
-            padding: 15px;
-            cursor: pointer;
-            border-radius: 5px;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-
-        #contact button:hover {
-            background-color: #00CC70;
+        #faq {
+            background: url('https://images.unsplash.com/photo-1516321310762-479e93c67ae5') no-repeat center/cover fixed;
         }
 
         #faq .faq-item {
             background: var(--card-bg);
-            margin-bottom: 15px;
-            padding: 20px;
-            border-radius: 10px;
+            margin-bottom: 20px;
+            padding: 25px;
+            border-radius: 15px;
             cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: background 0.3s, transform 0.3s;
+        }
+
+        #faq .faq-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-5px);
         }
 
         #faq .faq-item h4 {
             margin: 0;
             color: var(--accent-color);
+            font-size: 1.4em;
         }
 
         #faq .faq-answer {
             display: none;
-            margin-top: 10px;
+            margin-top: 15px;
+            font-size: 1.1em;
+        }
+
+        #contact {
+            background: var(--secondary-color);
+        }
+
+        #contact form {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+        }
+
+        #contact input, #contact textarea {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            font-size: 1.2em;
+        }
+
+        #contact input:focus, #contact textarea:focus {
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+        }
+
+        #contact button {
+            background: linear-gradient(90deg, var(--accent-color), #00CC70);
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.2em;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        #contact button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px var(--accent-color);
         }
 
         footer {
             text-align: center;
-            padding: 20px;
+            padding: 40px;
             background: var(--secondary-color);
-            font-size: 0.9em;
+            font-size: 1.1em;
+        }
+
+        footer a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+            margin: 0 10px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
         }
 
         /* Animations */
         @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
+            from { opacity: 0; transform: translateY(-40px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(40px); }
             to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Dark Mode Toggle (optional, but added for enhancement) */
-        .dark-mode-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--card-bg);
-            padding: 10px;
-            border-radius: 50%;
-            cursor: pointer;
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            header { padding: 50px 10px; }
-            header h1 { font-size: 2em; }
-            header p { font-size: 1.2em; }
-            section { padding: 20px 10px; }
-            .command-search input { width: 90%; }
+            header h1 { font-size: 2.8em; }
+            header p { font-size: 1.4em; }
+            nav { flex-direction: column; gap: 15px; padding: 10px; }
+            nav ul { flex-direction: column; align-items: center; }
+            .command-search input { width: 95%; }
+            .command-categories { grid-template-columns: 1fr; }
+            section { padding: 50px 15px; }
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Emulation Helper Bot</h1>
-        <p> Discord bot: 40+ powerful commands for moderation, fun, economy, and more. Elevate your server today!</p>
-        <a href="https://discord.com/oauth2/authorize?client_id=1405225443891740683" class="invite-btn">Invite to Your Server</a>
+    <nav>
+        <div class="logo">Emulation Helper Bot</div>
+        <ul>
+            <li><a href="#home">Home</a></li>
+            <li><a href="#commands">Commands</a></li>
+            <li><a href="privacy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Service</a></li>
+            <li><a href="https://discord.com/oauth2/authorize?client_id=1405225443891740683" class="invite-btn">Invite Bot</a></li>
+        </ul>
+    </nav>
+
+    <header id="home">
+        <div id="particles-js"></div>
+        <div class="content">
+            <h1>Emulation Helper Bot</h1>
+            <p>Elevate your Discord server with over 40 slash commands for moderation, fun, economy, and events.</p>
+            <a href="https://discord.com/oauth2/authorize?client_id=1405225443891740683" class="invite-btn">Invite Now</a>
+        </div>
     </header>
 
     <section id="overview">
         <h2>Why Choose Emulation Helper Bot?</h2>
         <ul>
-            <li><strong>Comprehensive Commands:</strong> Over 40 slash commands across 6 categories, from bans to memes.</li>
-            <li><strong>Secure & Efficient:</strong> Built with Discord.js, featuring permissions, error handling, and cooldowns.</li>
-            <li><strong>Engaging Features:</strong> Economy system, events management, and fun games to boost community interaction.</li>
-            <li><strong>Easy Setup:</strong> Node.js powered, with a simple .env configuration. Host anywhere.</li>
-            <li><strong>Customizable:</strong> Open-source code—add your own commands or integrate databases for persistence.</li>
+            <li><strong>40+ Slash Commands:</strong> Comprehensive tools for server management, from bans to polls.</li>
+            <li><strong>Engaging Community:</strong> Games, economy, and events to keep members active and entertained.</li>
+            <li><strong>Robust & Secure:</strong> Built with Discord.js, featuring permissions and error handling.</li>
+            <li><strong>Event Management:</strong> Seamlessly create and manage server events.</li>
+            <li><strong>Customizable:</strong> Open-source code for easy extensions and integrations.</li>
         </ul>
     </section>
 
     <section id="commands">
         <h2>Command List</h2>
         <div class="command-search">
-            <input type="text" id="commandSearch" placeholder="Search commands..." onkeyup="searchCommands()">
+            <input type="text" id="commandSearch" placeholder="Search commands (e.g., /ban, /poll)..." onkeyup="searchCommands()">
         </div>
         <div class="command-categories" id="commandCategories">
             <div class="category">
@@ -341,7 +479,7 @@
 
     <section id="invite">
         <h2>Invite the Bot</h2>
-        <p>Ready to supercharge your server? Invite now and start using powerful commands instantly.</p>
+        <p>Ready to supercharge your Discord server? Invite now and explore 40+ commands!</p>
         <a href="https://discord.com/oauth2/authorize?client_id=1405225443891740683" class="invite-btn">Invite Now</a>
     </section>
 
@@ -349,34 +487,109 @@
         <h2>Frequently Asked Questions</h2>
         <div class="faq-item" onclick="toggleAnswer(this)">
             <h4>How do I set up the bot?</h4>
-            <div class="faq-answer">Clone the repo, add your .env file with token and IDs, run npm install, then node index.js.</div>
+            <div class="faq-answer">Clone the repository, add a .env file with your DISCORD_TOKEN, CLIENT_ID, and GUILD_ID, run `npm install`, then `node index.js`.</div>
         </div>
         <div class="faq-item" onclick="toggleAnswer(this)">
-            <h4>Can I add custom commands?</h4>
-            <div class="faq-answer">Yes! Edit commands.js or use a dynamic loader for modular additions.</div>
+            <h4>Can I customize the commands?</h4>
+            <div class="faq-answer">Yes! Edit commands.js or implement a dynamic command loader for modular additions.</div>
         </div>
         <div class="faq-item" onclick="toggleAnswer(this)">
-            <h4>Does it support databases?</h4>
-            <div class="faq-answer">Economy is placeholder; integrate SQLite or MongoDB for persistence.</div>
+            <h4>Does the bot support databases?</h4>
+            <div class="faq-answer">Economy commands use placeholders. Integrate SQLite or MongoDB for persistent data.</div>
+        </div>
+        <div class="faq-item" onclick="toggleAnswer(this)">
+            <h4>How do I report issues?</h4>
+            <div class="faq-answer">Use the contact form below or join our Discord support server.</div>
         </div>
     </section>
 
     <section id="contact">
-        <h2>Get in Touch</h2>
-        <p>Questions or suggestions? Drop a message!</p>
-        <form id="contact-form">
-            <input type="text" placeholder="Your Name" required>
-            <input type="email" placeholder="Your Email" required>
-            <textarea placeholder="Your Message" required></textarea>
+        <h2>Contact Us</h2>
+        <p>Questions or suggestions? Drop us a message!</p>
+        <form id="contact-form" action="https://formspree.io/f/YOUR_FORMSPREE_ID" method="POST">
+            <input type="text" name="name" placeholder="Your Name" required>
+            <input type="email" name="email" placeholder="Your Email" required>
+            <textarea name="message" placeholder="Your Message" required></textarea>
             <button type="submit">Send Message</button>
         </form>
     </section>
 
     <footer>
-        <p>&copy; 2025 Emulation Helper Bot. All rights reserved.</p>
+        <p>&copy; 2025 Emulation Helper Bot. All rights reserved. <a href="privacy.html">Privacy Policy</a> | <a href="terms.html">Terms of Service</a></p>
     </footer>
 
+    <!-- CDN Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/particles.js/2.0.0/particles.min.js"></script>
     <script>
+        // Register ScrollTrigger
+        gsap.registerPlugin(ScrollTrigger);
+
+        // GSAP Animations
+        gsap.from('nav', { y: -100, duration: 1.2, ease: 'power3.out' });
+        gsap.from('#overview li', {
+            opacity: 0,
+            y: 60,
+            stagger: 0.2,
+            duration: 1.2,
+            ease: 'power3.out',
+            delay: 0.5
+        });
+        gsap.from('.category', {
+            opacity: 0,
+            y: 50,
+            stagger: 0.2,
+            duration: 1,
+            scrollTrigger: { trigger: '#commands', start: 'top 80%' }
+        });
+        gsap.from('.faq-item', {
+            opacity: 0,
+            x: -50,
+            stagger: 0.2,
+            duration: 1,
+            scrollTrigger: { trigger: '#faq', start: 'top 80%' }
+        });
+
+        // Particles.js
+        particlesJS('particles-js', {
+            particles: {
+                number: { value: 120, density: { enable: true, value_area: 1000 } },
+                color: { value: '#00FF88' },
+                shape: { type: 'circle', stroke: { width: 0 } },
+                opacity: { value: 0.7, random: true },
+                size: { value: 4, random: true },
+                line_linked: {
+                    enable: true,
+                    distance: 120,
+                    color: '#00FF88',
+                    opacity: 0.6,
+                    width: 1.5
+                },
+                move: {
+                    enable: true,
+                    speed: 4,
+                    direction: 'none',
+                    random: true,
+                    straight: false,
+                    out_mode: 'out'
+                }
+            },
+            interactivity: {
+                detect_on: 'canvas',
+                events: {
+                    onhover: { enable: true, mode: 'grab' },
+                    onclick: { enable: true, mode: 'push' },
+                    resize: true
+                },
+                modes: {
+                    grab: { distance: 200, line_linked: { opacity: 1 } },
+                    push: { particles_nb: 5 }
+                }
+            },
+            retina_detect: true
+        });
+
         // Command Search
         function searchCommands() {
             const input = document.getElementById('commandSearch').value.toLowerCase();
@@ -399,14 +612,26 @@
         // FAQ Toggle
         function toggleAnswer(element) {
             const answer = element.querySelector('.faq-answer');
-            answer.style.display = answer.style.display === 'block' ? 'none' : 'block';
+            gsap.to(answer, {
+                height: answer.style.display === 'block' ? 0 : 'auto',
+                duration: 0.5,
+                ease: 'power3.inOut',
+                onStart: () => {
+                    answer.style.display = answer.style.display === 'block' ? 'none' : 'block';
+                }
+            });
         }
 
-        // Contact Form Submission (Placeholder)
-        document.getElementById('contact-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('Message sent successfully! (Integrate with Formspree or backend for real functionality.)');
-            this.reset();
+        // Smooth Scroll for Nav Links
+        document.querySelectorAll('nav a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                window.scrollTo({
+                    top: target.offsetTop - 80,
+                    behavior: 'smooth'
+                });
+            });
         });
     </script>
 </body>
