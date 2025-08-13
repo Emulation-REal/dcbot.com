@@ -1,81 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Xbox API Demo Starter</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 2rem; background: #121212; color: #eee; }
-    button { font-size: 1.2rem; padding: 1rem 2rem; background: #107c10; border: none; color: white; border-radius: 8px; cursor: pointer; }
-    #output { margin-top: 1rem; white-space: pre-wrap; background: #222; padding: 1rem; border-radius: 8px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech to Text Transcription</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        #toggleButton {
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        #toggleButton:hover {
+            background-color: #45a049;
+        }
+        #toggleButton.stop {
+            background-color: #f44336;
+        }
+        #toggleButton.stop:hover {
+            background-color: #da190b;
+        }
+        #transcript {
+            width: 80%;
+            max-width: 600px;
+            min-height: 200px;
+            padding: 15px;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            line-height: 1.5;
+            overflow-y: auto;
+        }
+    </style>
 </head>
 <body>
+    <h1>Speech to Text</h1>
+    <button id="toggleButton">Start Transcription</button>
+    <div id="transcript"></div>
 
-<h1>Xbox API Demo (conceptual)</h1>
-<button id="loginBtn">Login with Xbox (Microsoft Account)</button>
-<pre id="output">Not logged in</pre>
+    <script>
+        if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+            alert('Speech recognition not supported in this browser. Please use Chrome or Firefox.');
+            document.getElementById('toggleButton').disabled = true;
+        } else {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+            let isRecognizing = false;
+            const button = document.getElementById('toggleButton');
+            const transcriptDiv = document.getElementById('transcript');
 
-<script>
-  const clientId = 'YOUR_MICROSOFT_APP_CLIENT_ID'; // Replace with your app's client id
-  const redirectUri = window.location.origin + window.location.pathname; // Your site URL
+            async function checkMicPermission() {
+                try {
+                    const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+                    if (permissionStatus.state === 'denied') {
+                        alert('Microphone access denied. Please allow microphone access in your browser settings.');
+                        return false;
+                    } else if (permissionStatus.state === 'prompt') {
+                        console.log('Requesting microphone permission...');
+                    }
+                    return true;
+                } catch (err) {
+                    console.error('Error checking microphone permission:', err);
+                    return false;
+                }
+            }
 
-  // Scopes needed for Xbox Live
-  const scopes = [
-    'XboxLive.signin',
-    'XboxLive.offline_access',
-    'User.Read'
-  ];
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+                for (let i = 0; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                transcriptDiv.innerHTML = finalTranscript + '<span style="color: #888;">' + interimTranscript + '</span>';
+            };
 
-  // Simple OAuth implicit flow URL
-  function getOAuthUrl() {
-    return `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?` +
-      `client_id=${encodeURIComponent(clientId)}` +
-      `&response_type=token` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&scope=${encodeURIComponent(scopes.join(' '))}` +
-      `&response_mode=fragment` +
-      `&state=12345` +
-      `&prompt=select_account`;
-  }
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    alert('Microphone access not allowed. Please enable microphone permissions in your browser settings.');
+                }
+                stopTranscription();
+            };
 
-  // Parse URL hash for access token
-  function parseHash() {
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    return {
-      access_token: params.get('access_token'),
-      expires_in: params.get('expires_in'),
-      token_type: params.get('token_type'),
-      state: params.get('state')
-    };
-  }
+            recognition.onend = () => {
+                console.log('Speech recognition stopped.');
+                isRecognizing = false;
+                button.textContent = 'Start Transcription';
+                button.classList.remove('stop');
+            };
 
-  // Show user Xbox profile (mock example using Microsoft Graph User API)
-  async function fetchUserProfile(accessToken) {
-    const res = await fetch('https://graph.microsoft.com/v1.0/me', {
-      headers: { Authorization: 'Bearer ' + accessToken }
-    });
-    if(!res.ok) throw new Error('Failed to fetch profile');
-    return await res.json();
-  }
+            async function toggleTranscription() {
+                if (isRecognizing) {
+                    stopTranscription();
+                } else {
+                    const hasPermission = await checkMicPermission();
+                    if (hasPermission) {
+                        try {
+                            await navigator.mediaDevices.getUserMedia({ audio: true });
+                            startTranscription();
+                        } catch (err) {
+                            console.error('Failed to access microphone:', err);
+                            alert('Failed to access microphone: ' + err.message);
+                        }
+                    }
+                }
+            }
 
-  document.getElementById('loginBtn').onclick = () => {
-    window.location.href = getOAuthUrl();
-  };
+            function startTranscription() {
+                recognition.start();
+                isRecognizing = true;
+                button.textContent = 'Stop Transcription';
+                button.classList.add('stop');
+                console.log('Started speech recognition...');
+                transcriptDiv.innerHTML = 'Listening...';
+            }
 
-  (async () => {
-    const tokenData = parseHash();
-    if(tokenData.access_token) {
-      document.getElementById('output').textContent = 'Fetching Xbox profile...';
-      try {
-        const profile = await fetchUserProfile(tokenData.access_token);
-        document.getElementById('output').textContent = JSON.stringify(profile, null, 2);
-      } catch(e) {
-        document.getElementById('output').textContent = 'Error fetching profile: ' + e.message;
-      }
-    }
-  })();
-</script>
+            function stopTranscription() {
+                recognition.stop();
+                isRecognizing = false;
+                button.textContent = 'Start Transcription';
+                button.classList.remove('stop');
+                console.log('Stopped speech recognition.');
+            }
 
+            button.onclick = toggleTranscription;
+        }
+    </script>
 </body>
 </html>
