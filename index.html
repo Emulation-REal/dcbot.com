@@ -3,269 +3,411 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Piano Key Detector Game</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>Emulation Helper Bot - Discord Server Manager</title>
     <style>
-        .piano {
-            display: flex;
+        :root {
+            --primary-color: #5865F2; /* Discord purple */
+            --secondary-color: #36393F; /* Dark background */
+            --text-color: #FFFFFF;
+            --accent-color: #00FF88;
+            --bg-color: #202225;
+            --card-bg: #2F3136;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color), #7289DA);
+            text-align: center;
+            padding: 80px 20px;
             position: relative;
-            width: 100%;
+            overflow: hidden;
+        }
+
+        header h1 {
+            font-size: 3em;
+            margin: 0;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        header p {
+            font-size: 1.5em;
+            margin: 10px 0;
+            animation: fadeInUp 1s ease-out 0.5s;
+            animation-fill-mode: both;
+        }
+
+        .invite-btn {
+            background-color: var(--accent-color);
+            color: #000;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: inline-block;
+            margin-top: 20px;
+        }
+
+        .invite-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        section {
+            padding: 40px 20px;
             max-width: 1200px;
-            height: 200px;
-            margin: 20px auto;
-            border: 2px solid #000;
-            background-color: #fff;
-            overflow-x: auto;
+            margin: 0 auto;
         }
-        .key {
-            position: relative;
-            flex: 1;
-            border: 1px solid #000;
-            box-sizing: border-box;
-            transition: background-color 0.3s;
+
+        h2 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            color: var(--accent-color);
         }
-        .white {
-            height: 100%;
-            background-color: white;
-            color: black;
-            z-index: 1;
+
+        #overview ul {
+            list-style-type: none;
+            padding: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
         }
-        .black {
-            position: absolute;
-            width: 50%;
-            height: 60%;
-            background-color: black;
-            color: white;
-            z-index: 2;
-            left: 75%;
-            transform: translateX(-50%);
+
+        #overview li {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s;
         }
-        .active {
-            background-color: #4CAF50 !important;
+
+        #overview li:hover {
+            transform: translateY(-5px);
         }
-        .key-label {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 10px;
+
+        #commands {
+            background: var(--secondary-color);
+        }
+
+        .command-search {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .command-search input {
+            width: 80%;
+            max-width: 500px;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            font-size: 1em;
+        }
+
+        .command-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .category {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .category h3 {
+            color: var(--accent-color);
+            margin-bottom: 15px;
+        }
+
+        .category ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .category li {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .category li:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #invite {
+            text-align: center;
+        }
+
+        #contact form {
+            display: flex;
+            flex-direction: column;
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        #contact input, #contact textarea {
+            margin-bottom: 15px;
+            padding: 15px;
+            border: none;
+            border-radius: 5px;
+            background: var(--secondary-color);
+            color: var(--text-color);
+        }
+
+        #contact button {
+            background-color: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        #contact button:hover {
+            background-color: #00CC70;
+        }
+
+        #faq .faq-item {
+            background: var(--card-bg);
+            margin-bottom: 15px;
+            padding: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        #faq .faq-item h4 {
+            margin: 0;
+            color: var(--accent-color);
+        }
+
+        #faq .faq-answer {
+            display: none;
+            margin-top: 10px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: var(--secondary-color);
+            font-size: 0.9em;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Dark Mode Toggle (optional, but added for enhancement) */
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header { padding: 50px 10px; }
+            header h1 { font-size: 2em; }
+            header p { font-size: 1.2em; }
+            section { padding: 20px 10px; }
+            .command-search input { width: 90%; }
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen flex flex-col items-center justify-center p-4">
-    <h1 class="text-4xl font-bold text-white mb-6">Piano Key Detector Game</h1>
-    <div class="flex flex-col items-center space-y-4 mb-4">
-        <div class="flex space-x-4">
-            <button id="toggleButton" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">Start Detection</button>
-            <button id="clearButton" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">Clear</button>
+<body>
+    <header>
+        <h1>Emulation Helper Bot</h1>
+        <p> Discord bot: 40+ powerful commands for moderation, fun, economy, and more. Elevate your server today!</p>
+        <a href="https://discord.com/oauth2/authorize?client_id=1405225443891740683" class="invite-btn">Invite to Your Server</a>
+    </header>
+
+    <section id="overview">
+        <h2>Why Choose Emulation Helper Bot?</h2>
+        <ul>
+            <li><strong>Comprehensive Commands:</strong> Over 40 slash commands across 6 categories, from bans to memes.</li>
+            <li><strong>Secure & Efficient:</strong> Built with Discord.js, featuring permissions, error handling, and cooldowns.</li>
+            <li><strong>Engaging Features:</strong> Economy system, events management, and fun games to boost community interaction.</li>
+            <li><strong>Easy Setup:</strong> Node.js powered, with a simple .env configuration. Host anywhere.</li>
+            <li><strong>Customizable:</strong> Open-source code—add your own commands or integrate databases for persistence.</li>
+        </ul>
+    </section>
+
+    <section id="commands">
+        <h2>Command List</h2>
+        <div class="command-search">
+            <input type="text" id="commandSearch" placeholder="Search commands..." onkeyup="searchCommands()">
         </div>
-        <div id="detectedNote" class="text-2xl font-semibold text-white">Detected Note: None</div>
-        <div id="pianoKeyboard" class="piano"></div>
-        <div id="errorMessage" class="text-red-300 text-center max-w-md"></div>
-    </div>
+        <div class="command-categories" id="commandCategories">
+            <div class="category">
+                <h3>Moderation</h3>
+                <ul>
+                    <li>/ban: Bans a user from the server</li>
+                    <li>/kick: Kicks a user from the server</li>
+                    <li>/mute: Mutes a user for a specified duration</li>
+                    <li>/unmute: Unmutes a user</li>
+                    <li>/clear: Clears a specified number of messages</li>
+                    <li>/warn: Warns a user</li>
+                    <li>/lock: Locks a channel, preventing messages</li>
+                    <li>/unlock: Unlocks a channel, allowing messages</li>
+                    <li>/slowmode: Sets slowmode for a channel</li>
+                    <li>/role: Assigns or removes a role from a user</li>
+                </ul>
+            </div>
+            <div class="category">
+                <h3>Utility</h3>
+                <ul>
+                    <li>/ping: Replies with Pong! and latency</li>
+                    <li>/serverinfo: Displays server information</li>
+                    <li>/userinfo: Displays user information</li>
+                    <li>/avatar: Displays a user’s avatar</li>
+                    <li>/whois: Looks up a user by ID</li>
+                    <li>/uptime: Shows the bot’s uptime</li>
+                </ul>
+            </div>
+            <div class="category">
+                <h3>Fun</h3>
+                <ul>
+                    <li>/roll: Rolls a dice</li>
+                    <li>/coinflip: Flips a coin</li>
+                    <li>/poll: Creates a poll</li>
+                    <li>/say: Makes the bot say a message</li>
+                    <li>/meme: Shares a random meme</li>
+                    <li>/rps: Play rock-paper-scissors</li>
+                    <li>/8ball: Ask the magic 8-ball a question</li>
+                    <li>/joke: Tells a random joke</li>
+                </ul>
+            </div>
+            <div class="category">
+                <h3>Information</h3>
+                <ul>
+                    <li>/help: Lists all available commands by category</li>
+                    <li>/botinfo: Displays bot information</li>
+                    <li>/channelinfo: Displays channel information</li>
+                    <li>/roleinfo: Displays role information</li>
+                    <li>/invite: Generates an invite link for the bot</li>
+                    <li>/stats: Shows server statistics</li>
+                </ul>
+            </div>
+            <div class="category">
+                <h3>Economy</h3>
+                <ul>
+                    <li>/balance: Check your or another user’s balance</li>
+                    <li>/give: Give coins to another user</li>
+                    <li>/shop: View available items in the shop</li>
+                    <li>/buy: Buy an item from the shop</li>
+                    <li>/leaderboard: Shows the top coin holders</li>
+                </ul>
+            </div>
+            <div class="category">
+                <h3>Events</h3>
+                <ul>
+                    <li>/eventcreate: Creates a server event</li>
+                    <li>/eventlist: Lists upcoming server events</li>
+                    <li>/eventjoin: Join a server event</li>
+                    <li>/eventleave: Leave a server event</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="invite">
+        <h2>Invite the Bot</h2>
+        <p>Ready to supercharge your server? Invite now and start using powerful commands instantly.</p>
+        <a href="https://discord.com/oauth2/authorize?client_id=1405225443891740683" class="invite-btn">Invite Now</a>
+    </section>
+
+    <section id="faq">
+        <h2>Frequently Asked Questions</h2>
+        <div class="faq-item" onclick="toggleAnswer(this)">
+            <h4>How do I set up the bot?</h4>
+            <div class="faq-answer">Clone the repo, add your .env file with token and IDs, run npm install, then node index.js.</div>
+        </div>
+        <div class="faq-item" onclick="toggleAnswer(this)">
+            <h4>Can I add custom commands?</h4>
+            <div class="faq-answer">Yes! Edit commands.js or use a dynamic loader for modular additions.</div>
+        </div>
+        <div class="faq-item" onclick="toggleAnswer(this)">
+            <h4>Does it support databases?</h4>
+            <div class="faq-answer">Economy is placeholder; integrate SQLite or MongoDB for persistence.</div>
+        </div>
+    </section>
+
+    <section id="contact">
+        <h2>Get in Touch</h2>
+        <p>Questions or suggestions? Drop a message!</p>
+        <form id="contact-form">
+            <input type="text" placeholder="Your Name" required>
+            <input type="email" placeholder="Your Email" required>
+            <textarea placeholder="Your Message" required></textarea>
+            <button type="submit">Send Message</button>
+        </form>
+    </section>
+
+    <footer>
+        <p>&copy; 2025 Emulation Helper Bot. All rights reserved.</p>
+    </footer>
 
     <script>
-        if (!window.AudioContext && !window.webkitAudioContext) {
-            const errorMsg = 'Web Audio API not supported. Use Edge, Chrome, or Firefox.';
-            document.getElementById('errorMessage').textContent = errorMsg;
-            document.getElementById('toggleButton').disabled = true;
-            console.error(errorMsg);
-        } else {
-            let audioContext = null;
-            let analyser = null;
-            let source = null;
-            let isAnalyzing = false;
-            const button = document.getElementById('toggleButton');
-            const clearButton = document.getElementById('clearButton');
-            const detectedNoteDiv = document.getElementById('detectedNote');
-            const errorDiv = document.getElementById('errorMessage');
-            const pianoKeyboard = document.getElementById('pianoKeyboard');
-            let currentNote = null;
-
-            // Generate piano notes and frequencies (A0 = 27.5 Hz to C8 = 4186 Hz)
-            const notes = [];
-            const noteNames = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
-            for (let octave = 0; octave <= 8; octave++) {
-                noteNames.forEach((name, index) => {
-                    if (octave === 0 && index < 3) return; // A0 start
-                    if (octave === 8 && index > 3) return; // C8 end
-                    notes.push(`${name}${octave}`);
-                });
-            }
-            const frequencies = notes.map((note, i) => 27.5 * Math.pow(2, i / 12)); // A0 = 27.5 Hz
-
-            // Create piano keyboard UI
-            function createPianoKeys() {
-                let whiteKeyIndex = 0;
-                notes.forEach((note, index) => {
-                    const isBlack = note.includes('#');
-                    const key = document.createElement('div');
-                    key.classList.add('key', isBlack ? 'black' : 'white');
-                    key.dataset.note = note;
-                    key.dataset.index = index;
-                    const label = document.createElement('div');
-                    label.classList.add('key-label');
-                    label.textContent = note;
-                    key.appendChild(label);
-                    if (!isBlack) {
-                        key.style.flex = '1';
-                        whiteKeyIndex++;
-                    }
-                    pianoKeyboard.appendChild(key);
-                });
-            }
-            createPianoKeys();
-
-            async function checkMicPermission() {
-                try {
-                    const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
-                    if (permissionStatus.state === 'denied') {
-                        const errorMsg = 'Microphone access denied. Go to browser settings > Privacy > Microphone.';
-                        errorDiv.textContent = errorMsg;
-                        console.error(errorMsg);
-                        return false;
-                    } else if (permissionStatus.state === 'prompt') {
-                        console.log('Requesting microphone permission...');
-                        errorDiv.textContent = 'Please allow microphone access when prompted.';
-                    }
-                    return true;
-                } catch (err) {
-                    const errorMsg = 'Error checking microphone permission: ' + err.message;
-                    errorDiv.textContent = errorMsg;
-                    console.error(errorMsg);
-                    return false;
-                }
-            }
-
-            // Autocorrelation pitch detection
-            function detectPitch(buffer, sampleRate) {
-                const SIZE = buffer.length;
-                const MAX_SAMPLES = Math.floor(SIZE / 2);
-                const MIN_SAMPLES = 2;
-                let bestOffset = -1;
-                let bestCorrelation = 0;
-                let rms = 0;
-                let foundGoodCorrelation = false;
-                let correlations = new Array(MAX_SAMPLES);
-
-                for (let i = 0; i < SIZE; i++) {
-                    rms += buffer[i] * buffer[i];
-                }
-                rms = Math.sqrt(rms / SIZE);
-                if (rms < 0.01) return null; // Too quiet
-
-                let lastCorrelation = 1;
-                for (let offset = MIN_SAMPLES; offset < MAX_SAMPLES; offset++) {
-                    let correlation = 0;
-                    for (let i = 0; i < SIZE - offset; i++) {
-                        correlation += Math.abs(buffer[i] * buffer[i + offset]);
-                    }
-                    correlation = correlation / SIZE;
-                    correlations[offset] = correlation;
-                    if ((correlation > 0.2) && (correlation > lastCorrelation)) {
-                        foundGoodCorrelation = true;
-                        if (correlation > bestCorrelation) {
-                            bestCorrelation = correlation;
-                            bestOffset = offset;
-                        }
-                    } else if (foundGoodCorrelation) {
-                        // Parabolic interpolation for better accuracy
-                        const shift = (correlations[bestOffset + 1] - correlations[bestOffset - 1]) / (2 * correlations[bestOffset]);
-                        return sampleRate / (bestOffset + shift);
-                    }
-                    lastCorrelation = correlation;
-                }
-                if (bestCorrelation > 0.01) {
-                    return sampleRate / bestOffset;
-                }
-                return null;
-            }
-
-            function frequencyToNote(frequency) {
-                if (!frequency) return null;
-                let closestIndex = 0;
-                let minDiff = Infinity;
-                frequencies.forEach((freq, index) => {
-                    const diff = Math.abs(frequency - freq);
-                    if (diff < minDiff) {
-                        minDiff = diff;
-                        closestIndex = index;
+        // Command Search
+        function searchCommands() {
+            const input = document.getElementById('commandSearch').value.toLowerCase();
+            const categories = document.querySelectorAll('.category');
+            categories.forEach(category => {
+                const commands = category.querySelectorAll('li');
+                let visible = false;
+                commands.forEach(cmd => {
+                    if (cmd.textContent.toLowerCase().includes(input)) {
+                        cmd.style.display = 'block';
+                        visible = true;
+                    } else {
+                        cmd.style.display = 'none';
                     }
                 });
-                return notes[closestIndex];
-            }
-
-            function highlightKey(note) {
-                if (currentNote) {
-                    const prevKey = document.querySelector(`[data-note="${currentNote}"]`);
-                    if (prevKey) prevKey.classList.remove('active');
-                }
-                currentNote = note;
-                if (note) {
-                    const key = document.querySelector(`[data-note="${note}"]`);
-                    if (key) key.classList.add('active');
-                    detectedNoteDiv.textContent = `Detected Note: ${note}`;
-                } else {
-                    detectedNoteDiv.textContent = 'Detected Note: None';
-                }
-            }
-
-            async function startAnalysis() {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    analyser = audioContext.createAnalyser();
-                    analyser.fftSize = 2048;
-                    source = audioContext.createMediaStreamSource(stream);
-                    source.connect(analyser);
-                    isAnalyzing = true;
-                    button.textContent = 'Stop Detection';
-                    console.log('Started pitch detection...');
-                    errorDiv.textContent = '';
-                    const buffer = new Float32Array(analyser.fftSize);
-                    function analyze() {
-                        if (!isAnalyzing) return;
-                        analyser.getFloatTimeDomainData(buffer);
-                        const pitch = detectPitch(buffer, audioContext.sampleRate);
-                        const note = frequencyToNote(pitch);
-                        highlightKey(note);
-                        requestAnimationFrame(analyze);
-                    }
-                    analyze();
-                } catch (err) {
-                    const errorMsg = 'Error starting pitch detection: ' + err.message;
-                    errorDiv.textContent = errorMsg;
-                    console.error(errorMsg);
-                }
-            }
-
-            function stopAnalysis() {
-                if (source) source.disconnect();
-                if (audioContext) audioContext.close();
-                isAnalyzing = false;
-                button.textContent = 'Start Detection';
-                console.log('Stopped pitch detection.');
-                highlightKey(null);
-            }
-
-            async function toggleAnalysis() {
-                if (isAnalyzing) {
-                    stopAnalysis();
-                } else {
-                    const hasPermission = await checkMicPermission();
-                    if (hasPermission) {
-                        startAnalysis();
-                    }
-                }
-            }
-
-            button.onclick = toggleAnalysis;
-
-            clearButton.onclick = () => {
-                highlightKey(null);
-                errorDiv.textContent = '';
-            };
+                category.style.display = visible ? 'block' : 'none';
+            });
         }
+
+        // FAQ Toggle
+        function toggleAnswer(element) {
+            const answer = element.querySelector('.faq-answer');
+            answer.style.display = answer.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Contact Form Submission (Placeholder)
+        document.getElementById('contact-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Message sent successfully! (Integrate with Formspree or backend for real functionality.)');
+            this.reset();
+        });
     </script>
 </body>
 </html>
