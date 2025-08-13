@@ -37,6 +37,10 @@
         #toggleButton.stop:hover {
             background-color: #da190b;
         }
+        #toggleButton:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
         #transcript {
             width: 80%;
             max-width: 600px;
@@ -49,17 +53,26 @@
             line-height: 1.5;
             overflow-y: auto;
         }
+        #errorMessage {
+            color: #f44336;
+            margin-top: 10px;
+            max-width: 600px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <h1>Speech to Text</h1>
     <button id="toggleButton">Start Transcription</button>
     <div id="transcript"></div>
+    <div id="errorMessage"></div>
 
     <script>
         if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-            alert('Speech recognition not supported in this browser. Please use Chrome or Firefox.');
+            const errorMsg = 'Speech recognition not supported in this browser. Please use a recent version of Edge, Chrome, or Firefox.';
+            document.getElementById('errorMessage').textContent = errorMsg;
             document.getElementById('toggleButton').disabled = true;
+            console.error(errorMsg);
         } else {
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
             recognition.lang = 'en-US';
@@ -68,19 +81,25 @@
             let isRecognizing = false;
             const button = document.getElementById('toggleButton');
             const transcriptDiv = document.getElementById('transcript');
+            const errorDiv = document.getElementById('errorMessage');
 
             async function checkMicPermission() {
                 try {
                     const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
                     if (permissionStatus.state === 'denied') {
-                        alert('Microphone access denied. Please allow microphone access in your browser settings.');
+                        const errorMsg = 'Microphone access denied. Please allow microphone access in Edge settings: Settings > Cookies and site permissions > Microphone.';
+                        errorDiv.textContent = errorMsg;
+                        console.error(errorMsg);
                         return false;
                     } else if (permissionStatus.state === 'prompt') {
                         console.log('Requesting microphone permission...');
+                        errorDiv.textContent = 'Please allow microphone access when prompted.';
                     }
                     return true;
                 } catch (err) {
-                    console.error('Error checking microphone permission:', err);
+                    const errorMsg = 'Error checking microphone permission: ' + err.message;
+                    errorDiv.textContent = errorMsg;
+                    console.error(errorMsg);
                     return false;
                 }
             }
@@ -97,13 +116,23 @@
                     }
                 }
                 transcriptDiv.innerHTML = finalTranscript + '<span style="color: #888;">' + interimTranscript + '</span>';
+                errorDiv.textContent = '';
             };
 
             recognition.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
+                let errorMsg = '';
                 if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-                    alert('Microphone access not allowed. Please enable microphone permissions in your browser settings.');
+                    errorMsg = 'Microphone access not allowed. Go to Edge Settings > Cookies and site permissions > Microphone, and allow access for this site.';
+                } else if (event.error === 'no-speech') {
+                    errorMsg = 'No speech detected. Please speak clearly or check your microphone.';
+                } else if (event.error === 'audio-capture') {
+                    errorMsg = 'Microphone not found or not working. Ensure a microphone is connected and enabled.';
+                } else {
+                    errorMsg = 'Speech recognition error: ' + event.error;
                 }
+                errorDiv.textContent = errorMsg;
+                console.error(errorMsg);
                 stopTranscription();
             };
 
@@ -121,23 +150,32 @@
                     const hasPermission = await checkMicPermission();
                     if (hasPermission) {
                         try {
-                            await navigator.mediaDevices.getUserMedia({ audio: true });
+                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                            stream.getTracks().forEach(track => track.stop()); // Release stream after permission check
                             startTranscription();
                         } catch (err) {
-                            console.error('Failed to access microphone:', err);
-                            alert('Failed to access microphone: ' + err.message);
+                            const errorMsg = 'Failed to access microphone: ' + err.message + '. Check Edge settings and ensure a microphone is connected.';
+                            errorDiv.textContent = errorMsg;
+                            console.error(errorMsg);
                         }
                     }
                 }
             }
 
             function startTranscription() {
-                recognition.start();
-                isRecognizing = true;
-                button.textContent = 'Stop Transcription';
-                button.classList.add('stop');
-                console.log('Started speech recognition...');
-                transcriptDiv.innerHTML = 'Listening...';
+                try {
+                    recognition.start();
+                    isRecognizing = true;
+                    button.textContent = 'Stop Transcription';
+                    button.classList.add('stop');
+                    console.log('Started speech recognition...');
+                    transcriptDiv.innerHTML = 'Listening...';
+                    errorDiv.textContent = '';
+                } catch (err) {
+                    const errorMsg = 'Error starting speech recognition: ' + err.message;
+                    errorDiv.textContent = errorMsg;
+                    console.error(errorMsg);
+                }
             }
 
             function stopTranscription() {
